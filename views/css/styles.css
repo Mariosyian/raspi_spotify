@@ -1,0 +1,38 @@
+.current-track-thumbnail {
+  border-radius: 50%;
+  height: 256px;
+  width: 256px;
+}
+
+.spotify-information {
+  font-size: 14pt;
+}
+
+.spotify-media-btn {
+  display: inline;
+  margin: 10px;
+}
+
+.spotify-player-col {
+  font-size: 20pt;
+  width: 33%;
+}
+
+.spotify-player-header {
+  color: #008a26;
+  font-size: 45pt;
+  margin: 0px;
+  padding: 10px;
+  text-align: center;
+}
+
+.track-thumbnail {
+  border-radius: 50%;
+  height: 128px;
+  text-align: center;
+  width: 128px;
+}
+
+#spotify-web-player {
+  text-align: center;
+}
