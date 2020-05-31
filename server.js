@@ -1,6 +1,7 @@
 
 /***** DEPENDENCIES *****/
 const auth = require('./views/js/auth.js');
+const bodyParser = require('body-parser');
 const express = require('express');
 const request = require('request');
 const queryString = require('query-string');
@@ -9,7 +10,9 @@ const spotify = require('spotify-web-api-node');
 /***** DEPENDENCY VARIABLES *****/
 const app = express();
 app.set('view engine', 'ejs');
-
+  /***** STATIC FILES *****/
+app.use('/static', express.static(__dirname + '/views/'));
+app.use(bodyParser.urlencoded({extended: true}));
 /***** GLOBAL VARIABLES *****/
 const hostname = 'localhost'
 const port = 3000;
@@ -30,8 +33,8 @@ var spotifyUsername = "";
 var currentTrackArtists = [];
 var currentTrackImage = "";
 var currentTrackName = "";
-/***** STATIC FILES *****/
-app.use('/static', express.static(__dirname + '/views/'));
+var errorMessages = [];
+var recentTracks = [];
 
 /***** GET REQUESTS *****/
 /* Home Page */
@@ -45,9 +48,12 @@ app.get('/', function(req, res) {
       username : spotifyUsername,
       current_track_name : currentTrackName,
       current_track_artists : currentTrackArtists,
-      current_track_image : currentTrackImage
+      current_track_image : currentTrackImage,
+      error_msgs : errorMessages,
+      recentTracks : recentTracks
     };
     res.render('ejs/index', context);
+    errorMessages = [];
   }
 });
 
@@ -59,7 +65,8 @@ app.get('/spotify', function(req, res) {
 
   var scopes = 'user-modify-playback-state user-read-email ' +
                'user-read-playback-state user-read-private ' +
-               'user-read-recently-played user-read-currently-playing ';
+               'user-read-recently-played user-read-currently-playing ' +
+               'user-modify-playback-state';
   var url = 'https://accounts.spotify.com/authorize?' +
             queryString.stringify({
               response_type: 'code',
@@ -113,6 +120,7 @@ app.get('/spotify_callback', function(req, res) {
   });
 });
 
+/* Spotify current state and user info */
 app.get('/spotify_get_current', function(req, res) {
   
   logResponse('GET', '/spotify_get_current', res);
@@ -127,6 +135,9 @@ app.get('/spotify_get_current', function(req, res) {
     logResponse('GET', options.url, response);
     if (error) {
       console.error(LOGTAG + 'spotify_get_current/ -- ERROR: ' + error);
+    } else if (response.statusCode !== 200) {
+      console.log(LOGTAG + 'spotify_get_current/ -- WARNING: ');
+      console.log(body);
     } else {
       console.log(LOGTAG + 'spotify_get_current/ -- Succesfully logged user.');
       spotifyUsername = body.display_name;
@@ -140,35 +151,65 @@ app.get('/spotify_get_current', function(req, res) {
     json: true
   };
   
-  // GET Current player state
   request.get(options, function(error, response, body) {
     logResponse('GET', options.url, response);
     if (error) {
       console.error(LOGTAG + 'spotify_get_current/ -- ERROR: ' + error);
+    } else if (response.statusCode !== 200) {
+      console.log(LOGTAG + 'spotify_get_current/ -- WARNING: ' +
+                  'Player has returned an invalid result!');
+      console.log(body);
+      errorMessages = errorMessages.concat("Player returned null. Are you using the Spotify app?");
     } else {
-      if (response.statusCode !== 200) {
-        console.log(LOGTAG + 'spotify_get_current/ -- WARNING: ' +
-                    'Player has returned an invalid result!');
-        console.log(body);
-      } else {
-        console.log(LOGTAG + 'spotify_get_current/ -- ' +
-                    'Succesfully logged player state.');
-        
-        spotifyPlaying = body.is_playing;
-        // Set context vars
-        currentTrackImage = body.item.album.images[0].url;
-        currentTrackName = body.item.name;
-        currentTrackArtists = []; // Reset artists to empty list
-        body.item.artists.forEach(artist => {
-          currentTrackArtists.push(artist.name);
-        });
-      }
-      res.redirect(homeURI);
+      console.log(LOGTAG + 'spotify_get_current/ -- ' +
+                  'Succesfully logged player state.');
+      
+      spotifyPlaying = body.is_playing;
+
+      currentTrackImage = body.item.album.images[0].url;
+      currentTrackName = body.item.name;
+      currentTrackArtists = [];   // Reset list for new track
+      body.item.artists.forEach(artist => {
+        currentTrackArtists.push(artist.name);
+      });
+      volume = body.device.volume_percent;
     }
   });
+
+  // GET recently played tracks
+  options = {
+    url: 'https://api.spotify.com/v1/me/player/recently-played',
+    headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+    json: true
+  };
+  
+  request.get(options, function(error, response, body) {
+    logResponse('GET', options.url, response);
+    if (error) {
+      console.error(LOGTAG + 'spotify_get_current/ -- ERROR: ' + error);
+    } else if (response.statusCode !== 200) {
+      console.log(LOGTAG + 'spotify_get_current/ -- WARNING: ');
+      console.log(body);
+    } else {
+      console.log(LOGTAG + 'spotify_get_current/ -- Succesfully retrieved recent tracks.');
+      
+      recentTracks = [];
+      if (body.items.length <= 5) {
+        body.items.forEach(item => {
+          recentTracks = recentTracks.concat(item);
+        });
+      } else {
+        for (var i = 0; i < 5; i ++) {
+          recentTracks = recentTracks.concat(body.items[i]);
+        }
+      }
+    }
+    
+    res.redirect(homeURI);
+  });
 });
+
 /* Spotify Play/Pause */
-/* Spotify Authentication */
 app.get('/spotify_play_pause', function(req, res) {
 
   logResponse('GET', '/spotify_play_pause', res);
@@ -181,55 +222,55 @@ app.get('/spotify_play_pause', function(req, res) {
   }
 });
 
-/* Spotify play */
-app.get("/spotify_play", function(req, res) {
+  /* Spotify play */
+  app.get("/spotify_play", function(req, res) {
 
-  logResponse('PUT', '/spotify_play', res);
-  if (spotifyAccessToken === null) {
-    console.log(LOGTAG + '/spotify_play -- ' + 'Access token is null');
-  } else {
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/play',
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
+    logResponse('PUT', '/spotify_play', res);
+    if (spotifyAccessToken === null) {
+      console.log(LOGTAG + '/spotify_play -- ' + 'Access token is null');
+    } else {
+      var options = {
+        url: 'https://api.spotify.com/v1/me/player/play',
+        headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+        json: true
+      };
 
-    // PUT player to play state
-    request.put(options, function(error, response, body) {
-      logResponse('PUT', options.url, response);
-      if (error) {
-        console.error(LOGTAG + 'spotify_play/ -- ERROR: ' + error);
-      } else {
-        res.redirect(homeURI);
-      }
-    });
-  }
-});
+      // PUT player to play state
+      request.put(options, function(error, response, body) {
+        logResponse('PUT', options.url, response);
+        if (error) {
+          console.error(LOGTAG + 'spotify_play/ -- ERROR: ' + error);
+        } else {
+          res.redirect(homeURI);
+        }
+      });
+    }
+  });
 
-/* Spotify pause */
-app.get("/spotify_pause", function(req, res) {
+  /* Spotify pause */
+  app.get("/spotify_pause", function(req, res) {
 
-  logResponse('PUT', '/spotify_pause', res);
-  if (spotifyAccessToken === null) {
-    console.log(LOGTAG + '/spotify_pause -- ' + 'Access token is null');
-  } else {
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/pause',
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
+    logResponse('PUT', '/spotify_pause', res);
+    if (spotifyAccessToken === null) {
+      console.log(LOGTAG + '/spotify_pause -- ' + 'Access token is null');
+    } else {
+      var options = {
+        url: 'https://api.spotify.com/v1/me/player/pause',
+        headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+        json: true
+      };
 
-    // PUT player to pause state
-    request.put(options, function(error, response, body) {
-      logResponse('PUT', options.url, response);
-      if (error) {
-        console.error(LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
-      } else {
-        res.redirect(homeURI);
-      }
-    });
-  }
-});
+      // PUT player to pause state
+      request.put(options, function(error, response, body) {
+        logResponse('PUT', options.url, response);
+        if (error) {
+          console.error(LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
+        } else {
+          res.redirect(homeURI);
+        }
+      });
+    }
+  });
 
 /* Spotify skip track */
 app.get("/spotify_next", function(req, res) {
@@ -256,7 +297,7 @@ app.get("/spotify_next", function(req, res) {
   }
 });
 
-/* Spotify pause */
+/* Spotify previous track */
 app.get("/spotify_previous", function(req, res) {
 
   logResponse('GET', '/spotify_previous', res);

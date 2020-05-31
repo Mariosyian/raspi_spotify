@@ -1,7 +1,24 @@
+/* ELEMENTS */
+body {
+  background-color: #3e444a;
+}
+
+/* CLASSES */
 .current-track-thumbnail {
   border-radius: 50%;
   height: 256px;
   width: 256px;
+}
+
+.recent-track-thumbnail {
+  border-radius: 50%;
+  height: 128px;
+  text-align: center;
+  width: 128px;
+}
+
+.recent-track-thumbnail-cell {
+  text-align: center;
 }
 
 .spotify-information {
@@ -13,26 +30,39 @@
   margin: 10px;
 }
 
-.spotify-player-col {
-  font-size: 20pt;
-  width: 33%;
-}
-
 .spotify-player-header {
   color: #008a26;
   font-size: 45pt;
   margin: 0px;
   padding: 10px;
+}
+
+.spotify-recent-col {
+  font-size: 14pt;
   text-align: center;
+  width: 20%;
+}
+
+.table-col-3 {
+  font-size: 20pt;
+  width: 33%;
 }
 
 .track-thumbnail {
   border-radius: 50%;
   height: 128px;
-  text-align: center;
   width: 128px;
 }
 
+.weather-header {
+  color: #00a8a0;
+  font-size: 45pt;
+}
+/* ID's */
 #spotify-web-player {
+  text-align: center;
+}
+
+#weather-table {
   text-align: center;
 }
