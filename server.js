@@ -18,17 +18,24 @@ app.use('/static', express.static(__dirname + '/views/'));
 app.use(bodyParser.urlencoded({extended: true}));
 
 /***** SERVER SETUP *****/
-const hostname = 'localhost'
-const port = 3000;
-const homeURI = 'http://' + hostname + ':' + port + '/';
+let port = process.env.PORT;
+if (port === null || port === "") {
+  port = 3000;
+}
+const homeURI = 'http://localhost:'+port+'/';
 
 const mongoContext = {
   useNewUrlParser: true,
   useUnifiedTopology: true
 };
-mongoose.connect('mongodb://localhost:27017/weather', mongoContext, function(err) {
+
+const dbUrl = 'mongodb+srv://' + auth.mongoUser + ':' +
+              auth.mongoPass + '@raspi-weather-p6zoz.mongodb.net/weather';
+
+mongoose.connect(dbUrl, mongoContext, function(err) {
   if (err) { 
     console.error("Failed to connect to database! Exiting server...");
+    console.error(err);
     process.exit(1);
   } else {
     console.log("Successfully connected to database!");
@@ -404,7 +411,7 @@ app.post('/weather', function(req, res){
 
 /***** BIND SERVER TO PORT *****/
 app.listen(port, function() {
-  console.log('Server listening at ' + homeURI);
+  console.log('Server listening at ' + homeURI + ' on port: ' + port);
 });
 
 /***** UTILITY METHODS *****/
