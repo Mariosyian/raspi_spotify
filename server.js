@@ -3,21 +3,47 @@
 const auth = require('./views/js/auth.js');
 const bodyParser = require('body-parser');
 const express = require('express');
+const mongoose = require('mongoose');
 const request = require('request');
 const queryString = require('query-string');
 const spotify = require('spotify-web-api-node');
+const time = require('./views/js/timestamp.js');
 
 /***** DEPENDENCY VARIABLES *****/
 const app = express();
 app.set('view engine', 'ejs');
-  /***** STATIC FILES *****/
+
+/***** STATIC FILES *****/
 app.use('/static', express.static(__dirname + '/views/'));
 app.use(bodyParser.urlencoded({extended: true}));
-/***** GLOBAL VARIABLES *****/
+
+/***** SERVER SETUP *****/
 const hostname = 'localhost'
 const port = 3000;
 const homeURI = 'http://' + hostname + ':' + port + '/';
 
+const mongoContext = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+};
+mongoose.connect('mongodb://localhost:27017/weather', mongoContext, function(err) {
+  if (err) { 
+    console.error("Failed to connect to database! Exiting server...");
+    process.exit(1);
+  } else {
+    console.log("Successfully connected to database!");
+  }
+});
+
+const weatherSchema = new mongoose.Schema({
+  time: String,
+  temperature: Number,
+  humidity: Number
+});
+
+const weatherData = mongoose.model("Weather", weatherSchema);
+
+/***** GLOBAL VARIABLES *****/
 const LOGTAG = "Server: /";
 
 const spotifyClientID = auth.spotifyClientID;
@@ -28,13 +54,16 @@ var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
 var spotifyPlaying = false;
 
-/* SPOTIFY CONTEXT VARIABLES */
+/***** CONTEXT VARIABLES ******/
+/* SPOTIFY */
 var spotifyUsername = "";
 var currentTrackArtists = [];
 var currentTrackImage = "";
 var currentTrackName = "";
 var errorMessages = [];
 var recentTracks = [];
+/* WEATHER */
+var weatherObject = []
 
 /***** GET REQUESTS *****/
 /* Home Page */
@@ -50,7 +79,8 @@ app.get('/', function(req, res) {
       current_track_artists : currentTrackArtists,
       current_track_image : currentTrackImage,
       error_msgs : errorMessages,
-      recentTracks : recentTracks
+      recentTracks : recentTracks,
+      weather: weatherObject
     };
     res.render('ejs/index', context);
     errorMessages = [];
@@ -76,6 +106,7 @@ app.get('/spotify', function(req, res) {
             });
   res.redirect(url);
   console.log(LOGTAG + 'spotify/ -- ' + 'Spotify callback redirected to --> ' + callback);
+  return;
 });
 
 /*
@@ -118,6 +149,7 @@ app.get('/spotify_callback', function(req, res) {
       res.redirect('/spotify_get_current');
     }
   });
+  return;
 });
 
 /* Spotify current state and user info */
@@ -158,7 +190,6 @@ app.get('/spotify_get_current', function(req, res) {
     } else if (response.statusCode !== 200) {
       console.log(LOGTAG + 'spotify_get_current/ -- WARNING: ' +
                   'Player has returned an invalid result!');
-      console.log(body);
       errorMessages = errorMessages.concat("Player returned null. Are you using the Spotify app?");
     } else {
       console.log(LOGTAG + 'spotify_get_current/ -- ' +
@@ -204,13 +235,93 @@ app.get('/spotify_get_current', function(req, res) {
         }
       }
     }
-    
+
     res.redirect(homeURI);
+    return;
   });
 });
 
+/* Spotify play */
+app.get('/spotify_play', function(req, res) {
+
+  logResponse('PUT', '/spotify_play', res);
+  if (spotifyAccessToken === null) {
+    console.log(LOGTAG + '/spotify_play -- ' + 'Access token is null');
+  } else {
+    var options = {
+      url: 'https://api.spotify.com/v1/me/player/play',
+      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+      json: true
+    };
+
+    // PUT player to play state
+    request.put(options, function(error, response, body) {
+      logResponse('PUT', options.url, response);
+      if (error) {
+        console.error(LOGTAG + 'spotify_play/ -- ERROR: ' + error);
+      } else {
+        res.redirect(homeURI);
+      }
+    });
+  }
+  return;
+});
+
+/* Spotify pause */
+app.get('/spotify_pause', function(req, res) {
+
+  logResponse('PUT', '/spotify_pause', res);
+  if (spotifyAccessToken === null) {
+    console.log(LOGTAG + '/spotify_pause -- ' + 'Access token is null');
+  } else {
+    var options = {
+      url: 'https://api.spotify.com/v1/me/player/pause',
+      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+      json: true
+    };
+
+    // PUT player to pause state
+    request.put(options, function(error, response, body) {
+      logResponse('PUT', options.url, response);
+      if (error) {
+        console.error(LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
+      } else {
+        res.redirect(homeURI);
+      }
+    });
+  }
+  return;
+});
+
+/* Get weather data */
+app.get('/weather', function(req, res) {
+  
+  logResponse('GET', '/weather', res);
+  weatherData.find(function(err, data) {
+    if (err) {
+      console.error(LOGTAG + "weather -- ERROR: " + err);
+    } else {
+
+      weatherObject = [];
+      // Last entry in database is latest timestamp
+      if (data.length <= 5) {
+        for (var i = data.length - 1; i >= 0; i --) {
+          weatherObject = weatherObject.concat(data[i]);
+        }
+      } else {
+        for (var i = 4; i >= 0; i --) {
+          weatherObject = weatherObject.concat(data[i]);
+        }
+      }
+      res.redirect(homeURI);
+    }
+  });
+  return;
+});
+
+/***** POST REQUESTS *****/
 /* Spotify Play/Pause */
-app.get('/spotify_play_pause', function(req, res) {
+app.post('/spotify_play_pause', function(req, res) {
 
   logResponse('GET', '/spotify_play_pause', res);
   if (spotifyPlaying) {
@@ -220,60 +331,11 @@ app.get('/spotify_play_pause', function(req, res) {
     res.redirect('/spotify_play');
     spotifyPlaying = true;
   }
+  return;
 });
 
-  /* Spotify play */
-  app.get("/spotify_play", function(req, res) {
-
-    logResponse('PUT', '/spotify_play', res);
-    if (spotifyAccessToken === null) {
-      console.log(LOGTAG + '/spotify_play -- ' + 'Access token is null');
-    } else {
-      var options = {
-        url: 'https://api.spotify.com/v1/me/player/play',
-        headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-        json: true
-      };
-
-      // PUT player to play state
-      request.put(options, function(error, response, body) {
-        logResponse('PUT', options.url, response);
-        if (error) {
-          console.error(LOGTAG + 'spotify_play/ -- ERROR: ' + error);
-        } else {
-          res.redirect(homeURI);
-        }
-      });
-    }
-  });
-
-  /* Spotify pause */
-  app.get("/spotify_pause", function(req, res) {
-
-    logResponse('PUT', '/spotify_pause', res);
-    if (spotifyAccessToken === null) {
-      console.log(LOGTAG + '/spotify_pause -- ' + 'Access token is null');
-    } else {
-      var options = {
-        url: 'https://api.spotify.com/v1/me/player/pause',
-        headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-        json: true
-      };
-
-      // PUT player to pause state
-      request.put(options, function(error, response, body) {
-        logResponse('PUT', options.url, response);
-        if (error) {
-          console.error(LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
-        } else {
-          res.redirect(homeURI);
-        }
-      });
-    }
-  });
-
 /* Spotify skip track */
-app.get("/spotify_next", function(req, res) {
+app.post('/spotify_next', function(req, res) {
 
   logResponse('GET', '/spotify_next', res);
   if (spotifyAccessToken === null) {
@@ -295,10 +357,11 @@ app.get("/spotify_next", function(req, res) {
       }
     });
   }
+  return;
 });
 
 /* Spotify previous track */
-app.get("/spotify_previous", function(req, res) {
+app.post('/spotify_previous', function(req, res) {
 
   logResponse('GET', '/spotify_previous', res);
   if (spotifyAccessToken === null) {
@@ -320,7 +383,24 @@ app.get("/spotify_previous", function(req, res) {
       }
     });
   }
+  return;
 });
+
+/* Save weather data from senseHat to db */
+app.post('/weather', function(req, res){
+
+  logResponse('POST', '/weather', res);
+  const weather = new weatherData({
+    time : time.timestamp,
+    temperature : req.query.temperature,
+    humidity : req.query.humidity
+  });
+
+  weather.save();
+  console.log("Weather data have been successfully added to database!");
+  return;
+});
+/*********** END OF REQUEST METHODS **********/
 
 /***** BIND SERVER TO PORT *****/
 app.listen(port, function() {

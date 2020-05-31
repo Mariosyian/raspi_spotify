@@ -20,6 +20,20 @@
 </head>
 
 <body>
+  <!-- Error messages -->
+  <% if (error_msgs.length > 0) { %>
+    <div class="alert alert-danger" role="alert">
+      <h3>Erros:</h3>
+      <ul>
+      <% error_msgs.forEach(err => { %>
+        <li>
+          <%= err %>
+        </li>
+      <% }); %>
+      </ul>
+    </div>
+  <% } %>
+
   <!-- Spotify Web Player -->
   <table id="spotify-web-player" class="table table-dark table-striped">
     <thead>
@@ -67,17 +81,17 @@
       <tr>
         <td></td>
         <td>
-          <form class="spotify-media-btn" action="/spotify_previous" method="GET">
+          <form class="spotify-media-btn" action="/spotify_previous" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
               <i class="fas fa-step-backward"></i>
             </button>
           </form>
-          <form class="spotify-media-btn" action="/spotify_play_pause" method="GET">
+          <form class="spotify-media-btn" action="/spotify_play_pause" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
               <i class="fas fa-play-circle"></i> / <i class="fas fa-pause-circle"></i>
             </button>
           </form>
-          <form class="spotify-media-btn" action="/spotify_next" method="GET">
+          <form class="spotify-media-btn" action="/spotify_next" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
               <i class="fas fa-step-forward"></i>
             </button>
@@ -87,20 +101,6 @@
       </tr>
     </tbody>
   </table>
-
-  <!-- Error messages -->
-  <% if (error_msgs.length > 0) { %>
-    <div class="alert alert-danger" role="alert">
-      <h3>Erros:</h3>
-      <ul>
-      <% error_msgs.forEach(err => { %>
-        <li>
-          <%= err %>
-        </li>
-      <% }); %>
-      </ul>
-    </div>
-  <% } %>
 
   <!-- Recently Played Tracks -->
   <table class="table table-dark table-striped">
@@ -133,7 +133,7 @@
     <thead>
       <tr>
         <th colspan="3">
-          <h1 class="weather-header">Temperature and Humidity Data (Refreshes every X seconds)</h1>
+          <h1 class="weather-header">Temperature and Humidity Data</h1>
         </th>
       </tr>
       <tr>
@@ -143,11 +143,13 @@
       </tr>
     </thead>
     <tbody>
+      <% weather.forEach(item => { %>
       <tr>
-        <td id="time"></td>
-        <td id="temp"></td>
-        <td id="humidity"></td>
+        <td id="time"><%= item.time %></td>
+        <td id="temp"><%= item.temperature %></td>
+        <td id="humidity"><%= item.humidity %></td>
       </tr>
+      <% }); %>
     </tbody>
   </table>
 
