@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const request = require('request');
 const queryString = require('query-string');
 const spotify = require('spotify-web-api-node');
-const time = require('./views/js/timestamp.js');
+// const time = require('./views/js/timestamp.js');
 
 /***** DEPENDENCY VARIABLES *****/
 const app = express();
@@ -18,11 +18,8 @@ app.use('/static', express.static(__dirname + '/views/'));
 app.use(bodyParser.urlencoded({extended: true}));
 
 /***** SERVER SETUP *****/
-let port = process.env.PORT;
-if (port === null || port === "") {
-  port = 3000;
-}
-const homeURI = 'http://localhost:'+port+'/';
+const port = 3000;
+const homeURI = 'http://localhost:' + port + '/';
 
 const mongoContext = {
   useNewUrlParser: true,
@@ -61,6 +58,17 @@ var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
 var spotifyPlaying = false;
 
+/***** SPOTIFY PLAYLISTS ******/
+const sunny = [
+  '37i9dQZF1DX843Qf4lrFtZ', // Young, WIld & Free
+  '37i9dQZF1DX1H4LbvY4OJi', // Happy pop
+  '37i9dQZF1DXeby79pVadGa'  // Get Home Happy!
+]
+
+const rainy = [
+  '#37i9dQZF1DXaw68inx4UiN' // Sounds of the rainforest
+]
+
 /***** CONTEXT VARIABLES ******/
 /* SPOTIFY */
 var spotifyUsername = "";
@@ -68,6 +76,7 @@ var currentTrackArtists = [];
 var currentTrackImage = "";
 var currentTrackName = "";
 var errorMessages = [];
+var playlist = [];
 var recentTracks = [];
 /* WEATHER */
 var weatherObject = []
@@ -86,6 +95,7 @@ app.get('/', function(req, res) {
       current_track_artists : currentTrackArtists,
       current_track_image : currentTrackImage,
       error_msgs : errorMessages,
+      playlist : playlist,
       recentTracks : recentTracks,
       weather: weatherObject
     };
@@ -243,7 +253,7 @@ app.get('/spotify_get_current', function(req, res) {
       }
     }
 
-    res.redirect(homeURI);
+    res.redirect('/weather');
     return;
   });
 });
@@ -309,6 +319,9 @@ app.get('/weather', function(req, res) {
       console.error(LOGTAG + "weather -- ERROR: " + err);
     } else {
 
+      var playlistID = "";
+      var randomIndex = 0;
+
       weatherObject = [];
       // Last entry in database is latest timestamp
       if (data.length <= 5) {
@@ -320,7 +333,38 @@ app.get('/weather', function(req, res) {
           weatherObject = weatherObject.concat(data[i]);
         }
       }
-      res.redirect(homeURI);
+
+      // Decide which playlist to send based on readings
+      if ( weatherObject[0].temperature > 17) {
+        randomIndex = Math.round(Math.random() * sunny.length);
+        playlistID = sunny[randomIndex];
+      }
+      if ( weatherObject[0].humidity > 50 ) {
+        randomIndex = Math.round(Math.random() * rainy.length);
+        playlistID = rainy[randomIndex];
+      }
+
+      // GET playlist information
+      var options = {
+        url: 'https://api.spotify.com/v1/playlists/' + playlistID,
+        headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+        json: true
+      };
+      
+      request.get(options, function(error, response, body) {
+        logResponse('GET', options.url, response);
+        if (error) {
+          console.error(LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
+        } else {
+          playlist = {
+            url : body.external_urls.spotify,
+            img : body.images[0].url,
+            name : body.name,
+            owner : body.owner.display_name
+          }
+        }
+        res.redirect(homeURI);
+      });
     }
   });
   return;
@@ -397,8 +441,12 @@ app.post('/spotify_previous', function(req, res) {
 app.post('/weather', function(req, res){
 
   logResponse('POST', '/weather', res);
+  var date = new Date();
+  var split = ("" + date).split(" ");
+  var timestamp = split[0] + ", " + split[2] + "-" + split[1] + "-" + split[3] +
+                  " @ " + split[4] + " (" + split[5] + ")";
   const weather = new weatherData({
-    time : time.timestamp,
+    time : timestamp,
     temperature : req.query.temperature,
     humidity : req.query.humidity
   });
@@ -411,7 +459,7 @@ app.post('/weather', function(req, res){
 
 /***** BIND SERVER TO PORT *****/
 app.listen(port, function() {
-  console.log('Server listening at ' + homeURI + ' on port: ' + port);
+  console.log('Server listening at: ' + homeURI);
 });
 
 /***** UTILITY METHODS *****/

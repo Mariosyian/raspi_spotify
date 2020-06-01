@@ -5,9 +5,9 @@ import requests
 import time
 
 sense = SenseHat()
-url = "http://localhost:3000/weather"
+url = "https://raspi-spotify.herokuapp.com/weather"
 
-# Repeat every 10 seconds
+# Repeat every 3600 seconds (1 hour)
 while True:
   # get sensor data
   temp = round(sense.get_temperature(), 2)
@@ -15,4 +15,5 @@ while True:
 
   data = {'temperature' : temp, 'humidity' : humidity}
   requests.post(url = url, params = data)
-  time.sleep(10)
+  print('Sent request @ ', datetime.now())
+  time.sleep(3600)

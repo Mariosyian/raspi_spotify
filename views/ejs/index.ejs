@@ -136,6 +136,17 @@
           <h1 class="weather-header">Temperature and Humidity Data</h1>
         </th>
       </tr>
+      <% if (playlist) { %>
+      <tr>
+        <td colspan="3">
+          <h3>
+            Based on the latest weather reading of <b><%= weather[0].temperature %></b> degrees, we thought you might enjoy this:
+          </h3>
+          <img src="<%= playlist.img %>" alt="Playlist thumbnail" class="recent-track-thumbnail">
+          <a href="<%= playlist.url %>" target="_blank"><h2><%= playlist.name %> by <%= playlist.owner %></h2></a>
+        </td>
+      </tr>
+      <% } %>
       <tr>
         <th class="table-col-3">Time</th>
         <th class="table-col-3">Temperature</th>
