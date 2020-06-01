@@ -66,7 +66,7 @@ const sunny = [
 ]
 
 const rainy = [
-  '#37i9dQZF1DXaw68inx4UiN' // Sounds of the rainforest
+  '37i9dQZF1DXaw68inx4UiN' // Sounds of the rainforest
 ]
 
 /***** CONTEXT VARIABLES ******/
@@ -323,30 +323,34 @@ app.get('/weather', function(req, res) {
       var randomIndex = 0;
 
       weatherObject = [];
-      // Last entry in database is latest timestamp
+      /*
+       * Last entry in database is latest timestamp
+       * so take data in reverse.
+       */ 
       if (data.length <= 5) {
         for (var i = data.length - 1; i >= 0; i --) {
           weatherObject = weatherObject.concat(data[i]);
         }
       } else {
-        for (var i = 4; i >= 0; i --) {
+        var counter = 0;
+        for (var i = data.length - 1; counter < 5; i --) {
           weatherObject = weatherObject.concat(data[i]);
+          counter ++;
         }
       }
 
       // Decide which playlist to send based on readings
       if ( weatherObject[0].temperature > 17) {
         randomIndex = Math.round(Math.random() * sunny.length);
-        playlistID = sunny[randomIndex];
-      }
-      if ( weatherObject[0].humidity > 50 ) {
-        randomIndex = Math.round(Math.random() * rainy.length);
-        playlistID = rainy[randomIndex];
+        playlistID = sunny[0];
+      } else {
+        randomIndex = Math.round(Math.random() * sunny.length);
+        playlistID = rainy[0];
       }
 
       // GET playlist information
       var options = {
-        url: 'https://api.spotify.com/v1/playlists/' + playlistID,
+        url: 'https://api.spotify.com/v1/playlists/'.concat(playlistID),
         headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
         json: true
       };
