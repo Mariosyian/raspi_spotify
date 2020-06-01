@@ -2,4 +2,4 @@
 .vscode
 
 # API Keys
-auth.js
+views/js/auth.js
