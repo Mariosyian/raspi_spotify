@@ -2,9 +2,12 @@
 This project is for use as a personal hobby and to further explore use of databases, web development and the Python programming language. This project is open-source, so feel free to fork this repository and make it your own.
 
 # Requirements (Alphabetically):
+* Body-Parser -- Version Used: v1.19.0
 * EJS -- Version Used: v3.1.3
 * Express -- Version Used: v4.17.1
+* Mongoose -- Version Used: v5.9.16
 * Node.js -- Version Used: v12.16.3
+* Nodemon -- Version Used: v2.0.4
 * NPM -- Version Used: v6.14.4
 * Query-String -- Version Used: v6.12.1
 * Request -- Version Used: v2.88.2
@@ -18,6 +21,8 @@ Create a RaspberryPi program that will make use of the SenseHAT extension, in or
 
 This project is in very early stages so no screenshots or data exist. Hopefully this gets filled out with time.
 
+01/06/2020: Deployed using Heroku service: https://raspi-spotify.herokuapp.com/
+
 # Implementation:
 ## Spotify:
 * Use of Spotify API
@@ -25,13 +30,13 @@ This project is in very early stages so no screenshots or data exist. Hopefully 
   * View currently playing track
   * Will append for:
     * previous / next track
-    * volume control
+    * volume control -- Spotify currently allows only for Desktop client support
     * device switching
 
 ## Weather Logging:
 * Use of SenseHAT for data gathering
 * MongoDB for data storage and access
-* Python and BeautifulSoup library to send data into website as live test
+* Python and <strike>BeautifulSoup</strike> requests library to send data into website as live test
 
 ## WebPage:
 * CSS and Bootstrap Framework for styling
