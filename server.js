@@ -7,7 +7,6 @@ const mongoose = require('mongoose');
 const request = require('request');
 const queryString = require('query-string');
 const spotify = require('spotify-web-api-node');
-// const time = require('./views/js/timestamp.js');
 
 /***** DEPENDENCY VARIABLES *****/
 const app = express();
@@ -60,7 +59,7 @@ var spotifyPlaying = false;
 
 /***** SPOTIFY PLAYLISTS ******/
 const sunny = [
-  '37i9dQZF1DX843Qf4lrFtZ', // Young, WIld & Free
+  '37i9dQZF1DX843Qf4lrFtZ', // Young, Wild & Free
   '37i9dQZF1DX1H4LbvY4OJi', // Happy pop
   '37i9dQZF1DXeby79pVadGa'  // Get Home Happy!
 ]
@@ -463,7 +462,7 @@ app.post('/weather', function(req, res){
 
 /***** BIND SERVER TO PORT *****/
 app.listen(port, function() {
-  console.log('Server listening at: ' + homeURI);
+  console.log('Server listening at: ' + homeURI + ' on port: ' + port);
 });
 
 /***** UTILITY METHODS *****/
