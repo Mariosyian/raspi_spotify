@@ -343,7 +343,7 @@ app.get('/weather', function(req, res) {
         randomIndex = Math.round(Math.random() * sunny.length);
         playlistID = sunny[0];
       } else {
-        randomIndex = Math.round(Math.random() * sunny.length);
+        randomIndex = Math.round(Math.random() * rainy.length);
         playlistID = rainy[0];
       }
 
