@@ -81,20 +81,51 @@
       <tr>
         <td></td>
         <td>
+          <!-- Shuffle -->
+          <form class="spotify-media-btn" action="/spotify_shuffle" method="POST">
+            <% if ( shuffle ) { %>
+            <button type="submit" class="btn btn-lg btn-success">
+              <i class="fas fa-random"></i>
+            </button>
+            <% } else { %>
+            <button type="submit" class="btn btn-lg btn-danger">
+              <i class="fas fa-random"></i>
+            </button>
+            <% } %>
+          </form>
+          <!-- Skip to previous -->
           <form class="spotify-media-btn" action="/spotify_previous" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
               <i class="fas fa-step-backward"></i>
             </button>
           </form>
+          <!-- Play / Pause -->
           <form class="spotify-media-btn" action="/spotify_play_pause" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
-              <i class="fas fa-play-circle"></i> / <i class="fas fa-pause-circle"></i>
+            <% if ( playing ) { %>
+            <i class="fas fa-play-circle"></i>
+            <% } else { %>
+            <i class="fas fa-pause-circle"></i>
+            <% } %>
             </button>
           </form>
+          <!-- Skip to next -->
           <form class="spotify-media-btn" action="/spotify_next" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
               <i class="fas fa-step-forward"></i>
             </button>
+          </form>
+          <!-- Repeat -->
+          <form class="spotify-media-btn" action="/spotify_repeat" method="POST">
+            <% if ( repeat === "track" || repeat === "context" ) { %>
+            <button type="submit" class="btn btn-lg btn-success">
+              <i class="fas fa-redo-alt"></i>
+            </button>
+            <% } else { %>
+            <button type="submit" class="btn btn-lg btn-danger">
+              <i class="fas fa-redo-alt"></i>
+            </button>
+            <% } %>
           </form>
         </td>
         <td></td>
@@ -121,7 +152,9 @@
       <tr>
         <% recentTracks.forEach(track => { %>
           <td class="spotify-recent-col">
-            <%= track.track.name %>
+            <a href="<%= track.track.external_urls.spotify %>" target="_blank">
+              <%= track.track.name %>
+            </a>
           </td>
         <% }); %>
       </tr>

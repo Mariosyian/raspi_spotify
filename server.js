@@ -55,7 +55,6 @@ const spotifyUserID = auth.spotifyUserID;
 
 var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
-var spotifyPlaying = false;
 
 /***** SPOTIFY PLAYLISTS ******/
 const sunny = [
@@ -65,7 +64,9 @@ const sunny = [
 ]
 
 const rainy = [
-  '37i9dQZF1DXaw68inx4UiN' // Sounds of the rainforest
+  '37i9dQZF1DXaw68inx4UiN', // Sounds of the rainforest
+  '37i9dQZF1DX4PP3DA4J0N8', // Nature Sounds
+  '37i9dQZF1DX4aYNO8X5RpR'  // Nightstorms
 ]
 
 /***** CONTEXT VARIABLES ******/
@@ -77,6 +78,9 @@ var currentTrackName = "";
 var errorMessages = [];
 var playlist = [];
 var recentTracks = [];
+var repeat = "";
+var shuffle = false;
+var spotifyPlaying = false;
 /* WEATHER */
 var weatherObject = []
 
@@ -94,8 +98,11 @@ app.get('/', function(req, res) {
       current_track_artists : currentTrackArtists,
       current_track_image : currentTrackImage,
       error_msgs : errorMessages,
+      playing : spotifyPlaying,
       playlist : playlist,
       recentTracks : recentTracks,
+      repeat : repeat,
+      shuffle : shuffle,
       weather: weatherObject
     };
     res.render('ejs/index', context);
@@ -220,6 +227,8 @@ app.get('/spotify_get_current', function(req, res) {
         currentTrackArtists.push(artist.name);
       });
       volume = body.device.volume_percent;
+      repeat = body.repeat_state;
+      shuffle = body.shuffle_state;
     }
   });
 
@@ -377,7 +386,7 @@ app.get('/weather', function(req, res) {
 /* Spotify Play/Pause */
 app.post('/spotify_play_pause', function(req, res) {
 
-  logResponse('GET', '/spotify_play_pause', res);
+  logResponse('POST', '/spotify_play_pause', res);
   if (spotifyPlaying) {
     res.redirect('/spotify_pause');
     spotifyPlaying = false;
@@ -391,7 +400,7 @@ app.post('/spotify_play_pause', function(req, res) {
 /* Spotify skip track */
 app.post('/spotify_next', function(req, res) {
 
-  logResponse('GET', '/spotify_next', res);
+  logResponse('POST', '/spotify_next', res);
   if (spotifyAccessToken === null) {
     console.log(LOGTAG + '/spotify_next -- ' + 'Access token is null');
   } else {
@@ -417,7 +426,7 @@ app.post('/spotify_next', function(req, res) {
 /* Spotify previous track */
 app.post('/spotify_previous', function(req, res) {
 
-  logResponse('GET', '/spotify_previous', res);
+  logResponse('POST', '/spotify_previous', res);
   if (spotifyAccessToken === null) {
     console.log(LOGTAG + '/spotify_previous -- ' + 'Access token is null');
   } else {
@@ -432,6 +441,74 @@ app.post('/spotify_previous', function(req, res) {
       logResponse('POST', options.url, response);
       if (error) {
         console.error(LOGTAG + 'spotify_previous/ -- ERROR: ' + error);
+      } else {
+        res.redirect('/spotify_get_current');
+      }
+    });
+  }
+  return;
+});
+
+/* Spotify repeat */
+app.post('/spotify_repeat', function(req, res) {
+
+  logResponse('POST', '/spotify_repeat', res);
+  if (spotifyAccessToken === null) {
+    console.log(LOGTAG + '/spotify_repeat -- ' + 'Access token is null');
+  } else {
+
+    if ( repeat === "track" || repeat === "context" ) {
+      repeat = "off";
+    } else {
+      repeat = "track";
+    }
+
+    var options = {
+      url: 'https://api.spotify.com/v1/me/player/repeat?state=' + repeat,
+      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+      json: true
+    };
+
+    // PUT player to toggle repeat mode
+    request.put(options, function(error, response, body) {
+      logResponse('PUT', options.url, response);
+      if (error) {
+        console.error(LOGTAG + 'spotify_repeat/ -- ERROR: ' + error);
+      } else {
+        res.redirect('/spotify_get_current');
+      }
+    });
+  }
+  return;
+});
+
+/* Spotify shuffle */
+app.post('/spotify_shuffle', function(req, res) {
+
+  logResponse('POST', '/spotify_shuffle', res);
+  if (spotifyAccessToken === null) {
+    console.log(LOGTAG + '/spotify_shuffle -- ' + 'Access token is null');
+  } else {
+
+    var toggle = '';
+    if ( shuffle ) {
+      toggle = 'false';
+    } else {
+      toggle = 'true';
+    }
+    shuffle = !shuffle;
+
+    var options = {
+      url: 'https://api.spotify.com/v1/me/player/shuffle?state=' + toggle,
+      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
+      json: true
+    };
+
+    // PUT player to toggle shuffle mode
+    request.put(options, function(error, response, body) {
+      logResponse('PUT', options.url, response);
+      if (error) {
+        console.error(LOGTAG + 'spotify_shuffle/ -- ERROR: ' + error);
       } else {
         res.redirect('/spotify_get_current');
       }
