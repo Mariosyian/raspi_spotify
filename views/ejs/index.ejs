@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="author" content="Marios Yiannakou">
   <meta name="description" content="RaspberryPi Weather based Spotify Web-Player">
-  <title>mario~ RaSpotify</title>
+  <title>mario~ RaSpotify - Home</title>
 
   <!-- ***** STYLESHEETS ***** -->
   <!-- FontAwsome CDN -->
@@ -13,34 +13,23 @@
   <link rel="stylesheet" href="static/fontawesome/css/fontawesome.css">
   <!-- BootStrap CDN -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-  <!-- Slider CSS -->
-  <link rel="stylesheet" href="static/css/roundslider.css">
   <!-- Custom CSS Styles -->
   <link rel="stylesheet" href="static/css/styles.css">
 </head>
 
 <body>
-  <!-- Error messages -->
-  <% if (error_msgs.length > 0) { %>
-    <div class="alert alert-danger" role="alert">
-      <h3>Erros:</h3>
-      <ul>
-      <% error_msgs.forEach(err => { %>
-        <li>
-          <%= err %>
-        </li>
-      <% }); %>
-      </ul>
-    </div>
-  <% } %>
-
   <!-- Spotify Web Player -->
   <table id="spotify-web-player" class="table table-dark table-striped">
     <thead>
       <tr>
         <th colspan="3">
-          <% if (username) { %>
-            <h1 class="spotify-player-header"><i class="fab fa-spotify"></i> Spotify Web-Player (<%= username %>) </h1>
+          <% if (user) { %>
+            <h1 class="spotify-player-header">
+              <i class="fab fa-spotify"></i> Spotify Web-Player 
+              (<a href="<%= user.external_urls.spotify %>" target="_blank">
+                <%= user.display_name %>
+              </a>)
+            </h1>
           <% } else { %>
             <h1 class="spotify-player-header"><i class="fab fa-spotify"></i> Spotify Web-Player</h1>
           <% } %>
@@ -59,8 +48,9 @@
           <img class="track-thumbnail" id="previous-track-thumb" alt="previous-track">
         </td>
         <td class="align-bottom">
-          <img class="current-track-thumbnail" id="current-track-thumb"
-              alt="current-track" src="<%= current_track_image %>">
+    <% if (current_track) { %>
+          <img class="current-track-thumbnail" id="current-track-thumb" alt="current-track"
+            src="<%= current_track.album.images[0].url %>">
         </td>
         <td class="align-bottom">
           <img class="track-thumbnail" id="upcoming-track-thumb" alt="upcoming-track">
@@ -69,12 +59,25 @@
       <!-- Track Information Row -->
       <tr>
         <td class="spotify-information" id="previousTrack">Previous track name</td>
-        <td class="spotify-information" id="currentTrack"><%= current_track_name %></td>
+        <td class="spotify-information" id="currentTrack">
+          <a href="<%= current_track.external_urls.spotify %>" target="_blank">
+            <%= current_track.name %>
+          </a>
+        </td>
         <td class="spotify-information" id="upcomingTrack">Upcoming track name</td>
       </tr>
       <tr>
         <td class="spotify-information" id="previousTrackArtists">Previous track artists</td>
-        <td class="spotify-information" id="currentTrackArtists"><%= current_track_artists %></td>
+        <td class="spotify-information" id="currentTrackArtists">
+        <% current_track.artists.forEach(artist => { %>
+          <a href="<%= artist.external_urls.spotify %>" target="_blank" class="artist-url">
+            <%= artist.name %>
+          </a>
+        <% }); %>
+    <% } else { %>
+        <p>Make sure you are using the Spotify App then reload this page.</p>
+    <% } %>
+        </td>
         <td class="spotify-information" id="upcomingTrackArtists">Upcoming track artists</td>
       </tr>
       <!-- Playback Controls -->
@@ -103,9 +106,9 @@
           <form class="spotify-media-btn" action="/spotify_play_pause" method="POST">
             <button type="submit" class="btn btn-lg btn-success">
             <% if ( playing ) { %>
-            <i class="fas fa-play-circle"></i>
+              <i class="fas fa-pause-circle"></i>
             <% } else { %>
-            <i class="fas fa-pause-circle"></i>
+              <i class="fas fa-play-circle"></i>
             <% } %>
             </button>
           </form>
@@ -195,8 +198,8 @@
       <% weather.forEach(item => { %>
       <tr>
         <td id="time"><%= item.time %></td>
-        <td id="temp"><%= item.temperature %></td>
-        <td id="humidity"><%= item.humidity %></td>
+        <td id="temp"><%= item.temperature %> °C</td>
+        <td id="humidity"><%= item.humidity %> %</td>
       </tr>
       <% }); %>
     </tbody>

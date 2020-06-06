@@ -4,6 +4,10 @@ body {
 }
 
 /* CLASSES */
+.artist-url {
+  padding: 0px 10px;
+}
+
 .current-track-thumbnail {
   border-radius: 50%;
   height: 256px;
