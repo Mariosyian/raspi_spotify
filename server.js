@@ -1,12 +1,11 @@
 
 /***** DEPENDENCIES *****/
 const auth = require('./views/js/auth.js');
+const axios = require('axios').default;
 const bodyParser = require('body-parser');
 const express = require('express');
-const https = require('https');
 const mongoose = require('mongoose');
 const queryString = require('query-string');
-const request = require('request');
 const spotify = require('spotify-web-api-node');
 
 /***** DEPENDENCY VARIABLES *****/
@@ -31,11 +30,11 @@ const dbUrl = 'mongodb+srv://' + auth.mongoUser + ':' +
 
 mongoose.connect(dbUrl, mongoContext, function(err) {
   if (err) { 
-    console.error("\x1b[31m%s\x1b[0m", "Failed to connect to database! Exiting server...");
-    console.error("\x1b[31m%s\x1b[0m", err);
+    console.error('\x1b[31m%s\x1b[0m', 'Failed to connect to database! Exiting server...');
+    console.error('\x1b[31m%s\x1b[0m', err);
     process.exit(1);
   } else {
-    console.log("Successfully connected to database!");
+    console.log('Successfully connected to database!');
   }
 });
 
@@ -45,10 +44,10 @@ const weatherSchema = new mongoose.Schema({
   humidity: Number
 });
 
-const weatherData = mongoose.model("Weather", weatherSchema);
+const weatherData = mongoose.model('Weather', weatherSchema);
 
 /***** GLOBAL VARIABLES *****/
-const LOGTAG = "Server: /";
+const LOGTAG = 'Server: /';
 
 const spotifyClientID = auth.spotifyClientID;
 const spotifySecretID = auth.spotifySecretID;
@@ -72,12 +71,13 @@ const rainy = [
 
 /***** CONTEXT VARIABLES ******/
 /* SPOTIFY */
-var spotifyUser = "";
+var spotifyUser = '';
+var currentDevice = null;
 var currentTrack = null;
 var errorMessages = [];
 var playlist = [];
 var recentTracks = [];
-var repeat = "";
+var repeat = '';
 var shuffle = false;
 var spotifyPlaying = false;
 /* WEATHER */
@@ -92,14 +92,15 @@ app.get('/', function(req, res) {
     res.redirect('/spotify');
   } else {
     const context = {
-      user : spotifyUser,
-      current_track : currentTrack,
-      error_msgs : errorMessages,
-      playing : spotifyPlaying,
-      playlist : playlist,
-      recentTracks : recentTracks,
-      repeat : repeat,
-      shuffle : shuffle,
+      user: spotifyUser,
+      current_device: currentDevice,
+      current_track: currentTrack,
+      error_msgs: errorMessages,
+      playing: spotifyPlaying,
+      playlist: playlist,
+      recentTracks: recentTracks,
+      repeat: repeat,
+      shuffle: shuffle,
       weather: weatherObject
     };
     res.render('ejs/index', context);
@@ -119,7 +120,7 @@ app.get('/error', function(req, res) {
 app.get('/spotify', function(req, res) {
 
   logResponse('GET', '/spotify', res);
-  const callback = homeURI + "spotify_callback";
+  const callback = homeURI + 'spotify_callback';
 
   var scopes = 'user-modify-playback-state user-read-email ' +
                'user-read-playback-state user-read-private ' +
@@ -145,39 +146,42 @@ app.get('/spotify_callback', function(req, res) {
 
   logResponse('GET', '/spotify_callback', res);
 
-  var code = req.query.code || null;
-  
+  const code = req.query.code || null;
+  if (code === null) {
+    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Code returned null from authorisation endpoint');
+    return;
+  }
+
   // POST to get an access token
-  const options = {
-    form: {
+  axios({
+    url: 'https://accounts.spotify.com/api/token',
+    method: 'POST',
+    params: {
       code: code,
-      // Must be the same redirect URI as one used in /spotify endpoint
-      redirect_uri: homeURI + "spotify_callback", 
       grant_type: 'authorization_code',
+      redirect_uri: homeURI + 'spotify_callback'
     },
     headers: {
-      'Authorization': 'Basic ' + (Buffer.from(spotifyClientID + ':' + spotifySecretID)
-                                  .toString('base64'))
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded'
     },
-    json: true,
-    url: 'https://accounts.spotify.com/api/token'
-  };
-  request.post(options, function(err, response, body) {
-    
-    logResponse('POST', options.url, response);
-    if (err) {
-      console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_callback/ -- ERROR: ' +
-                                'Spotify API broke and said: ' + err);
-    } else {
-      spotifyAccessToken = response.body.access_token;
-      spotifyRefreshToken = response.body.refresh_token;
-
-      console.log('\x1b[32m%s\x1b[0m', LOGTAG + "spotify_callback/ -- " +
-                                       "Succesfully retrieved access token!");
-
-      res.redirect('/spotify_get_current');
+    auth: {
+      username: spotifyClientID,
+      password: spotifySecretID
     }
-  });
+  })
+  .then(function(response) {
+    logResponse('POST', 'https://accounts.spotify.com/api/token', { statusCode: response.status });
+    spotifyAccessToken = response.data.access_token;
+    spotifyRefreshToken = response.data.refresh_token;
+    console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ' +
+                                     'Succesfully retrieved access token!');
+    
+    res.redirect('/spotify_get_current');
+  })
+  .catch(function(err) {
+    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ERROR: ' + err);
+  })
   return;
 });
 
@@ -185,88 +189,108 @@ app.get('/spotify_callback', function(req, res) {
 app.get('/spotify_get_current', function(req, res) {
   
   logResponse('GET', '/spotify_get_current', res);
-  // GET Current user info
-  var options = {
-    url: 'https://api.spotify.com/v1/me',
-    headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-    json: true
-  };
-  
-  request.get(options, function(error, response, body) {
-    logResponse('GET', options.url, response);
-    if (error) {
-      console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_get_current/ -- ERROR: ' + error);
-    } else if (response.statusCode !== 200) {
-      console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- WARNING: ');
-      console.log(body);
-    } else {
-      console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- Succesfully logged user.');
-      spotifyUser = body;
-    }
-  });
-  
-  // GET Current player state
-  /* Returns undefined if not using Spotify App on device */
-  options = {
-    url: 'https://api.spotify.com/v1/me/player',
-    headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-    json: true
-  };
-  
-  request.get(options, function(error, response, body) {
-    logResponse('GET', options.url, response);
-    if (error) {
-      console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_get_current/ -- ERROR: ' + error);
-    } else if (response.statusCode !== 200) {
-      console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- WARNING: ' +
-                  'Player has returned an invalid result!');
-      errorMessages = errorMessages.concat("Player returned null! Are you sure the Spotify app is running?");
-    } else {
-      console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' +
-                                       'Succesfully logged player state.');
-      
-      spotifyPlaying = body.is_playing;
-
-      currentTrack = body.item;
-      volume = body.device.volume_percent;
-      repeat = body.repeat_state;
-      shuffle = body.shuffle_state;
-    }
-  });
-
-  // GET recently played tracks
-  options = {
-    url: 'https://api.spotify.com/v1/me/player/recently-played',
-    headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-    json: true
-  };
-  
-  request.get(options, function(error, response, body) {
-    logResponse('GET', options.url, response);
-    if (error) {
-      console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_get_current/ -- ERROR: ' + error);
-    } else if (response.statusCode !== 200) {
-      console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- WARNING: ');
-      console.log(body);
-    } else {
-      console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' + 
-                                       'Succesfully retrieved recent tracks.');
-      
-      recentTracks = [];
-      if (body.items.length <= 5) {
-        body.items.forEach(item => {
-          recentTracks = recentTracks.concat(item);
-        });
+  if (spotifyAccessToken === null) {
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' + 'Access token is null');
+  } else {
+    // GET Current user info
+    axios({
+      url: 'https://api.spotify.com/v1/me',
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
+      }
+    })
+    .then(function(response) {
+      logResponse('GET', 'https://api.spotify.com/v1/me', { statusCode: response.status });
+      if (response.status !== 200) {
+        console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- WARNING: ');
+        console.log(repsonse);
       } else {
-        for (var i = 0; i < 5; i ++) {
-          recentTracks = recentTracks.concat(body.items[i]);
+        console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ' +
+                    'Succesfully logged user.');
+        spotifyUser = response.data;
+      }
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ERROR: ' + err);
+    })
+    
+    // GET Current player state
+    /* Returns undefined if not using Spotify App on device */
+    axios({
+      url: 'https://api.spotify.com/v1/me/player',
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
+      }
+    })
+    .then(function(response) {
+      logResponse('GET', 'https://api.spotify.com/v1/me/player', { statusCode: response.status });
+      if (response.status !== 200) {
+        console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- WARNING: ' +
+                                        'Player has returned an invalid result!');
+        errorMessages = errorMessages.concat(
+          'Player returned null! Are you sure the Spotify app is running?'
+        );
+      } else {
+        console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ' +
+                                        'Succesfully logged player state.');
+        const body = response.data;
+
+        spotifyPlaying = body.is_playing;
+        currentTrack = body.item;
+        currentDevice = body.device;
+        volume = body.device.volume_percent;
+        repeat = body.repeat_state;
+        shuffle = body.shuffle_state;
+      }
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ERROR: ' + err);
+    })
+
+    // GET recently played tracks
+    axios({
+      url: 'https://api.spotify.com/v1/me/player/recently-played',
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
+      }
+    })
+    .then(function(response) {
+      logResponse('GET', 'https://api.spotify.com/v1/me/player/recently-played', {
+        statusCode: response.status
+      });
+      if (response.status !== 200) {
+        console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- WARNING:');
+        console.log(response);
+      } else {
+        console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ' +
+                                        'Succesfully retrieved recent tracks.');
+        recentTracks = [];
+        if (response.data.items.length <= 5) {
+          response.data.items.forEach(item => {
+            recentTracks = recentTracks.concat(item);
+          });
+        } else {
+          for (var i = 0; i < 5; i ++) {
+            recentTracks = recentTracks.concat(response.data.items[i]);
+          }
         }
       }
-    }
 
-    res.redirect('/weather');
-    return;
-  });
+      /* After final API call ONLY continue to Weather API */
+      res.redirect('/weather');
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ERROR: ' +
+                    err);
+    })
+  }
+  return;
 });
 
 /* Spotify play */
@@ -274,23 +298,26 @@ app.get('/spotify_play', function(req, res) {
 
   logResponse('PUT', '/spotify_play', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + '/spotify_play -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ' + 'Access token is null');
   } else {
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/play',
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
-
     // PUT player to play state
-    request.put(options, function(error, response, body) {
-      logResponse('PUT', options.url, response);
-      if (error) {
-        console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_play/ -- ERROR: ' + error);
-      } else {
-        res.redirect(homeURI);
+    axios({
+      url: 'https://api.spotify.com/v1/me/player/play',
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
       }
-    });
+    })
+    .then(function(response) {
+      logResponse('PUT', 'https://api.spotify.com/v1/me/player/play', {
+        statusCode: response.status
+      });
+      res.redirect(homeURI);
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ERROR: ' + err);
+    })
   }
   return;
 });
@@ -300,23 +327,25 @@ app.get('/spotify_pause', function(req, res) {
 
   logResponse('PUT', '/spotify_pause', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + '/spotify_pause -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ' + 'Access token is null');
   } else {
-    var options = {
+    axios({
       url: 'https://api.spotify.com/v1/me/player/pause',
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
-
-    // PUT player to pause state
-    request.put(options, function(error, response, body) {
-      logResponse('PUT', options.url, response);
-      if (error) {
-        console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
-      } else {
-        res.redirect(homeURI);
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
       }
-    });
+    })
+    .then(function(response) {
+      logResponse('PUT', 'https://api.spotify.com/v1/me/player/pause', {
+        statusCode: response.status
+      });
+      res.redirect(homeURI);
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ERROR: ' + err);
+    })
   }
   return;
 });
@@ -327,10 +356,10 @@ app.get('/weather', function(req, res) {
   logResponse('GET', '/weather', res);
   weatherData.find(function(err, data) {
     if (err) {
-      console.error("\x1b[31m%s\x1b[0m", LOGTAG + "weather -- ERROR: " + err);
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather -- ERROR: ' + err);
     } else {
 
-      var playlistID = "";
+      var playlistID = '';
       var randomIndex = 0;
 
       weatherObject = [];
@@ -360,26 +389,30 @@ app.get('/weather', function(req, res) {
       }
 
       // GET playlist information
-      var options = {
+      axios({
         url: 'https://api.spotify.com/v1/playlists/'.concat(playlistID),
-        headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-        json: true
-      };
-      
-      request.get(options, function(error, response, body) {
-        logResponse('GET', options.url, response);
-        if (error) {
-          console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_pause/ -- ERROR: ' + error);
-        } else {
-          playlist = {
-            url : body.external_urls.spotify,
-            img : body.images[0].url,
-            name : body.name,
-            owner : body.owner.display_name
-          }
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ' + spotifyAccessToken
+        }
+      })
+      .then(function(response) {
+        logResponse('GET', 'https://api.spotify.com/v1/playlists/'.concat(playlistID), {
+          statusCode: response.status
+        });
+        const body = response.data;
+        playlist = {
+          url : body.external_urls.spotify,
+          img : body.images[0].url,
+          name : body.name,
+          owner : body.owner.display_name
         }
         res.redirect(homeURI);
-      });
+      })
+      .catch(function(err) {
+        console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/playlists/ -- ERROR: ' + err);
+      })
     }
   });
   return;
@@ -405,23 +438,26 @@ app.post('/spotify_next', function(req, res) {
 
   logResponse('POST', '/spotify_next', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + '/spotify_next -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ' + 'Access token is null');
   } else {
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/next',
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
-
     // POST to player to skip track
-    request.post(options, function(error, response, body) {
-      logResponse('POST', options.url, response);
-      if (error) {
-        console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_next/ -- ERROR: ' + error);
-      } else {
-        res.redirect('/spotify_get_current');
+    axios({
+      url: 'https://api.spotify.com/v1/me/player/next',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
       }
-    });
+    })
+    .then(function(response) {
+      logResponse('POST', 'https://api.spotify.com/v1/me/player/next', {
+        statusCode: response.status
+      });
+      res.redirect('/spotify_get_current');
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+    })
   }
   return;
 });
@@ -431,7 +467,7 @@ app.post('/spotify_previous', function(req, res) {
 
   logResponse('POST', '/spotify_previous', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + '/spotify_previous -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ' + 'Access token is null');
   } else {
     var options = {
       url: 'https://api.spotify.com/v1/me/player/previous',
@@ -440,14 +476,23 @@ app.post('/spotify_previous', function(req, res) {
     };
 
     // POST to player to skip to previous track
-    request.post(options, function(error, response, body) {
-      logResponse('POST', options.url, response);
-      if (error) {
-        console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_previous/ -- ERROR: ' + error);
-      } else {
-        res.redirect('/spotify_get_current');
+    axios({
+      url: 'https://api.spotify.com/v1/me/player/previous',
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
       }
-    });
+    })
+    .then(function(response) {
+      logResponse('POST', 'https://api.spotify.com/v1/me/player/previous', {
+        statusCode: response.status
+      });
+      res.redirect('/spotify_get_current');
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ERROR: ' + err);
+    })
   }
   return;
 });
@@ -457,30 +502,33 @@ app.post('/spotify_repeat', function(req, res) {
 
   logResponse('POST', '/spotify_repeat', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + '/spotify_repeat -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_repeat/ -- ' + 'Access token is null');
   } else {
 
-    if ( repeat === "track" || repeat === "context" ) {
-      repeat = "off";
+    if ( repeat === 'track' || repeat === 'context' ) {
+      repeat = 'off';
     } else {
-      repeat = "track";
+      repeat = 'track';
     }
 
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/repeat?state=' + repeat,
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
-
     // PUT player to toggle repeat mode
-    request.put(options, function(error, response, body) {
-      logResponse('PUT', options.url, response);
-      if (error) {
-        console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_repeat/ -- ERROR: ' + error);
-      } else {
-        res.redirect('/spotify_get_current');
+    axios({
+      url: 'https://api.spotify.com/v1/me/player/repeat?state=' + repeat,
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
       }
-    });
+    })
+    .then(function(response) {
+      logResponse('PUT', 'https://api.spotify.com/v1/me/player/repeat?state=' + repeat, {
+        statusCode: response.status
+      });
+      res.redirect('/spotify_get_current');
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+    })
   }
   return;
 });
@@ -490,7 +538,7 @@ app.post('/spotify_shuffle', function(req, res) {
 
   logResponse('POST', '/spotify_shuffle', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + '/spotify_shuffle -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');
   } else {
 
     var toggle = '';
@@ -501,21 +549,24 @@ app.post('/spotify_shuffle', function(req, res) {
     }
     shuffle = !shuffle;
 
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/shuffle?state=' + toggle,
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
-
     // PUT player to toggle shuffle mode
-    request.put(options, function(error, response, body) {
-      logResponse('PUT', options.url, response);
-      if (error) {
-        console.error("\x1b[31m%s\x1b[0m", LOGTAG + 'spotify_shuffle/ -- ERROR: ' + error);
-      } else {
-        res.redirect('/spotify_get_current');
+    axios({
+      url: 'https://api.spotify.com/v1/me/player/shuffle?state=' + toggle,
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + spotifyAccessToken
       }
-    });
+    })
+    .then(function(response) {
+      logResponse('PUT', 'https://api.spotify.com/v1/me/player/shuffle?state=' + toggle, {
+        statusCode: response.status
+      });
+      res.redirect('/spotify_get_current');
+    })
+    .catch(function(err) {
+      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+    })
   }
   return;
 });
@@ -525,9 +576,9 @@ app.post('/weather', function(req, res){
 
   logResponse('POST', '/weather', res);
   var date = new Date();
-  var split = ("" + date).split(" ");
-  var timestamp = split[0] + ", " + split[2] + "-" + split[1] + "-" + split[3] +
-                  " @ " + split[4] + " (" + split[5] + ")";
+  var split = ('' + date).split(' ');
+  var timestamp = split[0] + ', ' + split[2] + '-' + split[1] + '-' + split[3] +
+                  ' @ ' + split[4] + ' (' + split[5] + ')';
   const weather = new weatherData({
     time : timestamp,
     temperature : req.query.temperature,
@@ -535,7 +586,7 @@ app.post('/weather', function(req, res){
   });
 
   weather.save();
-  console.log("Weather data have been successfully added to database!");
+  console.log('Weather data have been successfully added to database!');
   return;
 });
 /*********** END OF REQUEST METHODS **********/
@@ -553,5 +604,5 @@ app.listen(port, function() {
  * @param {Response} res 
  */
 function logResponse(type, uri, res) {
-  console.log(type + " @ " + uri + " with response: " + res.statusCode);
+  console.log(type + ' @ ' + uri + ' with response: ' + res.statusCode);
 }

@@ -24,14 +24,23 @@
       <tr>
         <th colspan="3">
           <% if (user) { %>
-            <h1 class="spotify-player-header">
-              <i class="fab fa-spotify"></i> Spotify Web-Player 
-              (<a href="<%= user.external_urls.spotify %>" target="_blank">
-                <%= user.display_name %>
-              </a>)
-            </h1>
+          <h1 class="spotify-player-header">
+            <i class="fab fa-spotify"></i> Spotify Web-Player 
+            (<a href="<%= user.external_urls.spotify %>" target="_blank">
+              <%= user.display_name %>
+            </a>)
+          </h1>
           <% } else { %>
-            <h1 class="spotify-player-header"><i class="fab fa-spotify"></i> Spotify Web-Player</h1>
+          <h1 class="spotify-player-header"><i class="fab fa-spotify"></i> Spotify Web-Player</h1>
+          <% } %>
+        </th>
+      </tr>
+      <tr>
+        <th colspan="3">
+          <% if (current_device) { %>
+          <h1 class="spotify-player-subheader">
+            Listening on: <%= current_device.name %>
+          </h1>
           <% } %>
         </th>
       </tr>

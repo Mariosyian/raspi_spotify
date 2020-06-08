@@ -40,6 +40,13 @@ body {
   padding: 10px;
 }
 
+.spotify-player-subheader {
+  color: #008a26;
+  font-size: 30pt;
+  margin: 0px;
+  padding: 5px;
+}
+
 .spotify-recent-col {
   font-size: 14pt;
   text-align: center;
