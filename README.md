@@ -2,6 +2,7 @@
 This project is for use as a personal hobby and to further explore use of databases, web development and the Python programming language. This project is open-source, so feel free to fork this repository and make it your own.
 
 # Requirements (Alphabetically):
+* Axios -- Version Used: v0.19.2
 * Body-Parser -- Version Used: v1.19.0
 * EJS -- Version Used: v3.1.3
 * Express -- Version Used: v4.17.1
@@ -10,7 +11,6 @@ This project is for use as a personal hobby and to further explore use of databa
 * Nodemon -- Version Used: v2.0.4
 * NPM -- Version Used: v6.14.4
 * Query-String -- Version Used: v6.12.1
-* Request -- Version Used: v2.88.2
 * Spotify-Web-Api-Node -- Version Used: v4.0.0
 
 # Usage:
@@ -41,6 +41,7 @@ This project is in very early stages so no screenshots or data exist. Hopefully 
 ## WebPage:
 * CSS and Bootstrap Framework for styling
 * EJS for HTML templates (View Model)
+* Heroku WebService to host NodeJS application online
 * HTML for creating the page
 * MongoDB and Mongoose framework for database
 * Node.js and Express for server-side coding
