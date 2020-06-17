@@ -1,31 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="author" content="Marios Yiannakou">
-  <meta name="description" content="RaspberryPi Weather based Spotify Web-Player">
-  <title>mario~ RaSpotify - Error</title>
-
-  <!-- ***** STYLESHEETS ***** -->
-  <!-- FontAwsome CDN -->
-  <link rel="stylesheet" href="static/fontawesome/css/all.css">
-  <link rel="stylesheet" href="static/fontawesome/css/fontawesome.css">
-  <!-- BootStrap CDN -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-  <!-- Custom CSS Styles -->
-  <link rel="stylesheet" href="static/css/err_styles.css">
-</head>
-
-<body>
+<%- include('header') -%>
   <!-- Error messages -->
   <div class="alert alert-danger" role="alert">
     <h3><i class="fas fa-exclamation-triangle"></i> Uh oh! Something went extremely wrong...</h3>
-    <p>
-      <i class="fas fa-times"></i> <%= error_msgs %>
-    </p>
+    <p><i class="fas fa-times"></i> <%= error_msg %></p>
     <hr>
     <a href="/"><i class="fas fa-home"></i> Go to Home Page</a>
   </div>
-</body>
-</html>
+  <%- include('footer') -%>

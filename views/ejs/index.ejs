@@ -1,23 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="author" content="Marios Yiannakou">
-  <meta name="description" content="RaspberryPi Weather based Spotify Web-Player">
-  <title>mario~ RaSpotify - Home</title>
-
-  <!-- ***** STYLESHEETS ***** -->
-  <!-- FontAwsome CDN -->
-  <link rel="stylesheet" href="static/fontawesome/css/all.css">
-  <link rel="stylesheet" href="static/fontawesome/css/fontawesome.css">
-  <!-- BootStrap CDN -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-  <!-- Custom CSS Styles -->
-  <link rel="stylesheet" href="static/css/styles.css">
-</head>
-
-<body>
+<%- include('header') -%>
   <!-- Spotify Web Player -->
   <table id="spotify-web-player" class="table table-dark table-striped">
     <thead>
@@ -213,10 +194,4 @@
       <% }); %>
     </tbody>
   </table>
-
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
-
-</body>
-</html>
+<%- include('footer') -%>

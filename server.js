@@ -74,7 +74,7 @@ const rainy = [
 var spotifyUser = '';
 var currentDevice = null;
 var currentTrack = null;
-var errorMessages = [];
+var errorMessages = '';
 var playlist = [];
 var recentTracks = [];
 var repeat = '';
@@ -95,7 +95,6 @@ app.get('/', function(req, res) {
       user: spotifyUser,
       current_device: currentDevice,
       current_track: currentTrack,
-      error_msgs: errorMessages,
       playing: spotifyPlaying,
       playlist: playlist,
       recentTracks: recentTracks,
@@ -111,7 +110,7 @@ app.get('/', function(req, res) {
 app.get('/error', function(req, res) {
   logResponse('GET', '/error', res);
   const context = {
-    error_msgs : errorMessages
+    error_msg : errorMessages
   };
   res.render('ejs/error', context);
 });
@@ -149,6 +148,8 @@ app.get('/spotify_callback', function(req, res) {
   const code = req.query.code || null;
   if (code === null) {
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Code returned null from authorisation endpoint');
+    errorMessages = "Something went wrong during Spotify callback...Try again";
+    res.render('ejs/error', {error_msg: errorMessages});
     return;
   }
 
@@ -181,6 +182,7 @@ app.get('/spotify_callback', function(req, res) {
   })
   .catch(function(err) {
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ERROR: ' + err);
+    res.render('ejs/error', {error_msg: err});
   })
   return;
 });
@@ -191,6 +193,7 @@ app.get('/spotify_get_current', function(req, res) {
   logResponse('GET', '/spotify_get_current', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
     // GET Current user info
     axios({
@@ -214,6 +217,7 @@ app.get('/spotify_get_current', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
     
     // GET Current player state
@@ -231,9 +235,6 @@ app.get('/spotify_get_current', function(req, res) {
       if (response.status !== 200) {
         console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- WARNING: ' +
                                         'Player has returned an invalid result!');
-        errorMessages = errorMessages.concat(
-          'Player returned null! Are you sure the Spotify app is running?'
-        );
       } else {
         console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ' +
                                         'Succesfully logged player state.');
@@ -249,6 +250,7 @@ app.get('/spotify_get_current', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
 
     // GET recently played tracks
@@ -288,6 +290,7 @@ app.get('/spotify_get_current', function(req, res) {
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ERROR: ' +
                     err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -299,6 +302,7 @@ app.get('/spotify_play', function(req, res) {
   logResponse('PUT', '/spotify_play', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
     // PUT player to play state
     axios({
@@ -317,6 +321,7 @@ app.get('/spotify_play', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -328,6 +333,7 @@ app.get('/spotify_pause', function(req, res) {
   logResponse('PUT', '/spotify_pause', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
     axios({
       url: 'https://api.spotify.com/v1/me/player/pause',
@@ -345,6 +351,7 @@ app.get('/spotify_pause', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -357,6 +364,7 @@ app.get('/weather', function(req, res) {
   weatherData.find(function(err, data) {
     if (err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     } else {
 
       var playlistID = '';
@@ -412,6 +420,7 @@ app.get('/weather', function(req, res) {
       })
       .catch(function(err) {
         console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/playlists/ -- ERROR: ' + err);
+        res.render('ejs/error', {error_msg: err});
       })
     }
   });
@@ -439,6 +448,7 @@ app.post('/spotify_next', function(req, res) {
   logResponse('POST', '/spotify_next', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
     // POST to player to skip track
     axios({
@@ -457,6 +467,7 @@ app.post('/spotify_next', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -468,6 +479,7 @@ app.post('/spotify_previous', function(req, res) {
   logResponse('POST', '/spotify_previous', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
     var options = {
       url: 'https://api.spotify.com/v1/me/player/previous',
@@ -492,6 +504,7 @@ app.post('/spotify_previous', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -503,6 +516,7 @@ app.post('/spotify_repeat', function(req, res) {
   logResponse('POST', '/spotify_repeat', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_repeat/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
 
     if ( repeat === 'track' || repeat === 'context' ) {
@@ -528,6 +542,7 @@ app.post('/spotify_repeat', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -538,7 +553,7 @@ app.post('/spotify_shuffle', function(req, res) {
 
   logResponse('POST', '/spotify_shuffle', res);
   if (spotifyAccessToken === null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');noAuthToken(res);
   } else {
 
     var toggle = '';
@@ -566,6 +581,7 @@ app.post('/spotify_shuffle', function(req, res) {
     })
     .catch(function(err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+      res.render('ejs/error', {error_msg: err});
     })
   }
   return;
@@ -585,7 +601,10 @@ app.post('/weather', function(req, res){
     humidity : req.query.humidity
   });
 
-  weather.save();
+  weather.save(function(err) {
+    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/ -- ERROR: ' + err);
+    res.render('ejs/error', {error_msg: err});
+  });
   console.log('Weather data have been successfully added to database!');
   return;
 });
@@ -605,4 +624,12 @@ app.listen(port, function() {
  */
 function logResponse(type, uri, res) {
   console.log(type + ' @ ' + uri + ' with response: ' + res.statusCode);
+}
+
+/**
+ * User has no authentication token for Spotify API
+ */
+function noAuthToken(res) {
+  errorMessages = 'You have not been authorised...try going to the home page to login?';
+  res.render('ejs/error', {error_msg: errorMessages});
 }
