@@ -14,7 +14,14 @@ This project is for use as a personal hobby and to further explore use of databa
 * Spotify-Web-Api-Node -- Version Used: v4.0.0
 
 # Usage:
-```node server.js```
+**NOTE:** You will need to create an auth.js where I kept all API Keys / User credentials for security.
+I keep mine in the views/js directory (views/js/auth.js is already added in gitignore file).
+
+Navigate to the root directory
+```
+npm install
+node server.js
+```
 
 # Project Idea:
 Create a RaspberryPi program that will make use of the SenseHAT extension, in order to take weather readings such as temperature and humidity. These readings will work along the Spotify API to form a RaspberryPi Spotify Web Server, that plays different playlists, based on weather conditions.
