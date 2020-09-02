@@ -132,7 +132,8 @@ app.get('/spotify', function(req, res) {
               response_type: 'code',
               client_id: spotifyClientID,
               scope: scopes,
-              redirect_uri: callback
+              redirect_uri: callback,
+              show_dialog: false
             });
   res.redirect(url);
   console.log(LOGTAG + 'spotify/ -- ' + 'Spotify callback redirected to --> ' + callback);
@@ -427,6 +428,12 @@ app.get('/weather', function(req, res) {
     }
   });
   return;
+});
+
+app.get('/logout', function(req, res) {
+  spotifyAccessToken = null;
+  // res.redirect('/');
+  res.redirect('https://www.spotify.com/logout/');
 });
 
 /***** POST REQUESTS *****/
