@@ -1,11 +1,10 @@
 
 /***** DEPENDENCIES *****/
-const auth = require('./views/js/auth.js');
 const axios = require('axios').default;
 const bodyParser = require('body-parser');
+const dotenv = require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const openWeather = require('./views/js/openWeather.js');
 const queryString = require('query-string');
 const schedule = require('node-schedule');
 const spotify = require('spotify-web-api-node');
@@ -19,7 +18,7 @@ app.use('/static', express.static(__dirname + '/views/'));
 app.use(bodyParser.urlencoded({extended: true}));
 
 /***** SERVER SETUP *****/
-const port = 3000;
+const port = process.env.PORT || 3000;
 const homeURI = 'http://localhost:' + port + '/';
 
 const mongoContext = {
@@ -27,8 +26,8 @@ const mongoContext = {
   useUnifiedTopology: true
 };
 
-const dbUrl = 'mongodb+srv://' + auth.mongoUser + ':' +
-              auth.mongoPass + '@raspi-weather-p6zoz.mongodb.net/weather';
+const dbUrl = 'mongodb+srv://' + process.env.MONGO_USER + ':' +
+              process.env.MONGO_PASS + '@raspi-weather-p6zoz.mongodb.net/weather';
 
 mongoose.connect(dbUrl, mongoContext, function(err) {
   if (err) { 
@@ -47,13 +46,15 @@ const weatherSchema = new mongoose.Schema({
 });
 
 const weatherData = mongoose.model('Weather', weatherSchema);
+// Require here as it makes use of Weather model
+const openWeather = require(__dirname + '/views/js/openWeather');
 
 /***** GLOBAL VARIABLES *****/
 const LOGTAG = 'Server: /';
 
-const spotifyClientID = auth.spotifyClientID;
-const spotifySecretID = auth.spotifySecretID;
-const spotifyUserID = auth.spotifyUserID;
+const spotifyClientID = process.env.SPOTIFY_CLIENT_ID;
+const spotifySecretID = process.env.SPOTIFY_SECRET_ID;
+const spotifyUserID = process.env.SPOTIFY_USER_ID;
 
 var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
@@ -88,7 +89,6 @@ var weatherObject = []
 /***** GET REQUESTS *****/
 /* Home Page */
 app.get('/', function(req, res) {
-
   logResponse('GET', '/', res);
   if (spotifyAccessToken === null) {
     res.redirect('/spotify');
@@ -119,10 +119,8 @@ app.get('/error', function(req, res) {
 
 /* Spotify Authentication */
 app.get('/spotify', function(req, res) {
-
   logResponse('GET', '/spotify', res);
   const callback = homeURI + 'spotify_callback';
-
   var scopes = 'user-modify-playback-state user-read-email ' +
                'user-read-playback-state user-read-private ' +
                'user-read-recently-played user-read-currently-playing ' +
@@ -145,9 +143,7 @@ app.get('/spotify', function(req, res) {
  * Used as redirect uri to obtain auth_token
  */
 app.get('/spotify_callback', function(req, res) {
-
   logResponse('GET', '/spotify_callback', res);
-
   const code = req.query.code || null;
   if (code === null) {
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Code returned null from authorisation endpoint');
@@ -155,7 +151,6 @@ app.get('/spotify_callback', function(req, res) {
     res.render('ejs/error', {error_msg: errorMessages});
     return;
   }
-
   // POST to get an access token
   axios({
     url: 'https://accounts.spotify.com/api/token',
@@ -192,7 +187,6 @@ app.get('/spotify_callback', function(req, res) {
 
 /* Spotify current state and user info */
 app.get('/spotify_get_current', function(req, res) {
-  
   logResponse('GET', '/spotify_get_current', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' + 'Access token is null');
@@ -222,7 +216,6 @@ app.get('/spotify_get_current', function(req, res) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
     })
-    
     // GET Current player state
     /* Returns undefined if not using Spotify App on device */
     axios({
@@ -255,7 +248,6 @@ app.get('/spotify_get_current', function(req, res) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
     })
-
     // GET recently played tracks
     axios({
       url: 'https://api.spotify.com/v1/me/player/recently-played',
@@ -286,7 +278,6 @@ app.get('/spotify_get_current', function(req, res) {
           }
         }
       }
-
       /* After final API call ONLY continue to Weather API */
       res.redirect('/weather');
     })
@@ -301,13 +292,11 @@ app.get('/spotify_get_current', function(req, res) {
 
 /* Spotify play */
 app.get('/spotify_play', function(req, res) {
-
   logResponse('PUT', '/spotify_play', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ' + 'Access token is null');
     noAuthToken(res);
   } else {
-    // PUT player to play state
     axios({
       url: 'https://api.spotify.com/v1/me/player/play',
       method: 'PUT',
@@ -332,7 +321,6 @@ app.get('/spotify_play', function(req, res) {
 
 /* Spotify pause */
 app.get('/spotify_pause', function(req, res) {
-
   logResponse('PUT', '/spotify_pause', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ' + 'Access token is null');
@@ -362,22 +350,17 @@ app.get('/spotify_pause', function(req, res) {
 
 /* Get weather data */
 app.get('/weather', function(req, res) {
-  
   logResponse('GET', '/weather', res);
   weatherData.find(function(err, data) {
     if (err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
     } else {
-
       var playlistID = '';
       var randomIndex = 0;
-
       weatherObject = [];
-      /*
-       * Last entry in database is latest timestamp
-       * so take data in reverse.
-       */ 
+
+      // Last entry in database is latest timestamp so take data in reverse.
       if (data.length <= 5) {
         for (var i = data.length - 1; i >= 0; i --) {
           weatherObject = weatherObject.concat(data[i]);
@@ -393,10 +376,10 @@ app.get('/weather', function(req, res) {
       // Decide which playlist to send based on readings
       if ( weatherObject[0].temperature > 17) {
         randomIndex = Math.round(Math.random() * sunny.length);
-        playlistID = sunny[0];
+        playlistID = sunny[randomIndex];
       } else {
         randomIndex = Math.round(Math.random() * rainy.length);
-        playlistID = rainy[0];
+        playlistID = rainy[randomIndex];
       }
 
       // GET playlist information
@@ -439,7 +422,6 @@ app.get('/logout', function(req, res) {
 /***** POST REQUESTS *****/
 /* Spotify Play/Pause */
 app.post('/spotify_play_pause', function(req, res) {
-
   logResponse('POST', '/spotify_play_pause', res);
   if (spotifyPlaying) {
     res.redirect('/spotify_pause');
@@ -453,13 +435,11 @@ app.post('/spotify_play_pause', function(req, res) {
 
 /* Spotify skip track */
 app.post('/spotify_next', function(req, res) {
-
   logResponse('POST', '/spotify_next', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ' + 'Access token is null');
     noAuthToken(res);
   } else {
-    // POST to player to skip track
     axios({
       url: 'https://api.spotify.com/v1/me/player/next',
       method: 'POST',
@@ -484,19 +464,11 @@ app.post('/spotify_next', function(req, res) {
 
 /* Spotify previous track */
 app.post('/spotify_previous', function(req, res) {
-
   logResponse('POST', '/spotify_previous', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ' + 'Access token is null');
     noAuthToken(res);
   } else {
-    var options = {
-      url: 'https://api.spotify.com/v1/me/player/previous',
-      headers: { 'Authorization': 'Bearer ' + spotifyAccessToken },
-      json: true
-    };
-
-    // POST to player to skip to previous track
     axios({
       url: 'https://api.spotify.com/v1/me/player/previous',
       method: 'POST',
@@ -521,20 +493,20 @@ app.post('/spotify_previous', function(req, res) {
 
 /* Spotify repeat */
 app.post('/spotify_repeat', function(req, res) {
-
   logResponse('POST', '/spotify_repeat', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_repeat/ -- ' + 'Access token is null');
     noAuthToken(res);
   } else {
 
-    if ( repeat === 'track' || repeat === 'context' ) {
+    if ( repeat === 'context' ) {
+      repeat = 'track';
+    } else if ( repeat === 'track' ) {
       repeat = 'off';
     } else {
-      repeat = 'track';
+      repeat = 'context';
     }
 
-    // PUT player to toggle repeat mode
     axios({
       url: 'https://api.spotify.com/v1/me/player/repeat?state=' + repeat,
       method: 'PUT',
@@ -559,7 +531,6 @@ app.post('/spotify_repeat', function(req, res) {
 
 /* Spotify shuffle */
 app.post('/spotify_shuffle', function(req, res) {
-
   logResponse('POST', '/spotify_shuffle', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');noAuthToken(res);
@@ -573,7 +544,6 @@ app.post('/spotify_shuffle', function(req, res) {
     }
     shuffle = !shuffle;
 
-    // PUT player to toggle shuffle mode
     axios({
       url: 'https://api.spotify.com/v1/me/player/shuffle?state=' + toggle,
       method: 'PUT',
@@ -596,46 +566,10 @@ app.post('/spotify_shuffle', function(req, res) {
   return;
 });
 
-/* Save weather data from OpenWeatherAPI to DB */
-/* Cron-job to run every 0th minute of every hour */
-const weatherPost = schedule.scheduleJob('0 * * * *', function() {
-  const OpenWeatherAPI = auth.openWeatherAPI;
-    const cityName = 'Manchester';
-    const url = 'https://api.openweathermap.org/data/2.5/weather?q=' +
-                cityName + '&appid=' + OpenWeatherAPI + '&units=metric';
-
-    axios({
-      url: url,
-      method: 'POST',
-      headers: {'Accept': 'application/json'}
-    })
-    .then(function(response) {
-      logResponse('POST', url, {statusCode: response.status});
-
-      const date = new Date();
-      const split = ('' + date).split(' ');
-      const timestamp = split[0] + ', ' + split[2] + '-' + split[1] + '-' + split[3] +
-                      ' @ ' + split[4] + ' (' + split[5] + ')';
-      const weather = new weatherData({
-        time : timestamp,
-        temperature : response.data.main.temp,
-        humidity : response.data.main.humidity
-      });
-
-      weather.save(function(err) {
-        if (err) {
-          console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'openWeatherAPI/ -- ERROR: ' + err);
-          // res.render('ejs/error', {error_msg: err});
-        } else {
-          console.log('Weather data have been successfully added to database!');
-        }
-      });
-    })
-    .catch(function(err) {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/ -- ERROR: ' + err);
-      // res.render('ejs/error', {error_msg: err});
-    })
-});
+/* Save weather data from OpenWeatherAPI to DB -- Intervals every hour */
+setInterval(function() {
+  openWeather.postWeatherAPI();
+}, 60000);
 /*********** END OF REQUEST METHODS **********/
 
 /***** BIND SERVER TO PORT *****/

@@ -6,3 +6,6 @@ views/js/auth.js
 
 # Node modules
 node_modules
+
+# ENV
+.env

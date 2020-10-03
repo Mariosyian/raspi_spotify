@@ -111,8 +111,12 @@
           </form>
           <!-- Repeat -->
           <form class="spotify-media-btn" action="/spotify_repeat" method="POST">
-            <% if ( repeat === "track" || repeat === "context" ) { %>
+            <% if ( repeat === "track" ) { %>
             <button type="submit" class="btn btn-lg btn-success">
+              <i class="fas fa-redo-alt"></i>
+            </button>
+            <% } else if ( repeat === "context" ) { %>
+            <button type="submit" class="btn btn-lg btn-warning">
               <i class="fas fa-redo-alt"></i>
             </button>
             <% } else { %>
