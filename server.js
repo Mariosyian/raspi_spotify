@@ -19,7 +19,9 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 /***** SERVER SETUP *****/
 const port = process.env.PORT || 3000;
-const homeURI = 'http://localhost:' + port + '/';
+const homeURI = process.env.HOME_URI || 'http://localhost:' + port + '/';
+
+console.log(homeURI);
 
 const mongoContext = {
   useNewUrlParser: true,
@@ -569,7 +571,7 @@ app.post('/spotify_shuffle', function(req, res) {
 /* Save weather data from OpenWeatherAPI to DB -- Intervals every hour */
 setInterval(function() {
   openWeather.postWeatherAPI();
-}, 60000);
+}, 3600000);
 /*********** END OF REQUEST METHODS **********/
 
 /***** BIND SERVER TO PORT *****/
