@@ -6,7 +6,6 @@ const dotenv = require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const queryString = require('query-string');
-const schedule = require('node-schedule');
 const spotify = require('spotify-web-api-node');
 
 /***** DEPENDENCY VARIABLES *****/
@@ -20,8 +19,6 @@ app.use(bodyParser.urlencoded({extended: true}));
 /***** SERVER SETUP *****/
 const port = process.env.PORT || 3000;
 const homeURI = process.env.HOME_URI || 'http://localhost:' + port + '/';
-
-console.log(homeURI);
 
 const mongoContext = {
   useNewUrlParser: true,
@@ -65,13 +62,17 @@ var spotifyRefreshToken = null;
 const sunny = [
   '37i9dQZF1DX843Qf4lrFtZ', // Young, Wild & Free
   '37i9dQZF1DX1H4LbvY4OJi', // Happy pop
-  '37i9dQZF1DXeby79pVadGa'  // Get Home Happy!
+  '37i9dQZF1DXeby79pVadGa', // Get Home Happy!
+  '37i9dQZF1DXbtuVQL4zoey', // Sunny Beats
+  '69pkbBraIGFlJOi21CEN80', // Sunny Music 2020 Chill Songs
 ]
 
 const rainy = [
   '37i9dQZF1DXaw68inx4UiN', // Sounds of the rainforest
   '37i9dQZF1DX4PP3DA4J0N8', // Nature Sounds
-  '37i9dQZF1DX4aYNO8X5RpR'  // Nightstorms
+  '37i9dQZF1DX4aYNO8X5RpR', // Nightstorms
+  '3Jk5Y4eumHuQ3ai8nvGFDZ', // RAIN LOFI // Rainy chilled HipHop Beats
+  '4eWBwGl0c5wtp6k5Krp6My', // Lo-Fi Rain | Rainy Lofi
 ]
 
 /***** CONTEXT VARIABLES ******/
@@ -123,11 +124,11 @@ app.get('/error', function(req, res) {
 app.get('/spotify', function(req, res) {
   logResponse('GET', '/spotify', res);
   const callback = homeURI + 'spotify_callback';
-  var scopes = 'user-modify-playback-state user-read-email ' +
+  let scopes = 'user-modify-playback-state user-read-email ' +
                'user-read-playback-state user-read-private ' +
                'user-read-recently-played user-read-currently-playing ' +
                'user-modify-playback-state';
-  var url = 'https://accounts.spotify.com/authorize?' +
+  let url = 'https://accounts.spotify.com/authorize?' +
             queryString.stringify({
               response_type: 'code',
               client_id: spotifyClientID,
@@ -238,6 +239,7 @@ app.get('/spotify_get_current', function(req, res) {
                                         'Succesfully logged player state.');
         const body = response.data;
 
+        // TODO: Volume
         spotifyPlaying = body.is_playing;
         currentTrack = body.item;
         currentDevice = body.device;
@@ -250,6 +252,7 @@ app.get('/spotify_get_current', function(req, res) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
     })
+    // TODO: Get player devices
     // GET recently played tracks
     axios({
       url: 'https://api.spotify.com/v1/me/player/recently-played',
@@ -269,13 +272,14 @@ app.get('/spotify_get_current', function(req, res) {
       } else {
         console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ' +
                                         'Succesfully retrieved recent tracks.');
+        // TODO: Pressing on a recent track should play it, not just visit the page??
         recentTracks = [];
         if (response.data.items.length <= 5) {
           response.data.items.forEach(item => {
             recentTracks = recentTracks.concat(item);
           });
         } else {
-          for (var i = 0; i < 5; i ++) {
+          for (let i = 0; i < 5; i ++) {
             recentTracks = recentTracks.concat(response.data.items[i]);
           }
         }
@@ -358,25 +362,25 @@ app.get('/weather', function(req, res) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
     } else {
-      var playlistID = '';
-      var randomIndex = 0;
+      let playlistID = '';
+      let randomIndex = 0;
       weatherObject = [];
 
       // Last entry in database is latest timestamp so take data in reverse.
       if (data.length <= 5) {
-        for (var i = data.length - 1; i >= 0; i --) {
+        for (let i = data.length - 1; i >= 0; i --) {
           weatherObject = weatherObject.concat(data[i]);
         }
       } else {
-        var counter = 0;
-        for (var i = data.length - 1; counter < 5; i --) {
+        let counter = 0;
+        for (let i = data.length - 1; counter < 5; i --) {
           weatherObject = weatherObject.concat(data[i]);
           counter ++;
         }
       }
 
       // Decide which playlist to send based on readings
-      if ( weatherObject[0].temperature > 17) {
+      if ( weatherObject[0].temperature >= 10 && weatherObject[0].humidity <= 76) {
         randomIndex = Math.round(Math.random() * sunny.length);
         playlistID = sunny[randomIndex];
       } else {
@@ -494,6 +498,7 @@ app.post('/spotify_previous', function(req, res) {
 });
 
 /* Spotify repeat */
+// TODO: Spamming the repeat button can result in 4xx as API response doesn't arrive in time
 app.post('/spotify_repeat', function(req, res) {
   logResponse('POST', '/spotify_repeat', res);
   if (spotifyAccessToken === null) {
@@ -538,7 +543,7 @@ app.post('/spotify_shuffle', function(req, res) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');noAuthToken(res);
   } else {
 
-    var toggle = '';
+    let toggle = '';
     if ( shuffle ) {
       toggle = 'false';
     } else {
@@ -567,11 +572,6 @@ app.post('/spotify_shuffle', function(req, res) {
   }
   return;
 });
-
-/* Save weather data from OpenWeatherAPI to DB -- Intervals every hour */
-setInterval(function() {
-  openWeather.postWeatherAPI();
-}, 3600000);
 /*********** END OF REQUEST METHODS **********/
 
 /***** BIND SERVER TO PORT *****/
@@ -597,3 +597,8 @@ function noAuthToken(res) {
   errorMessages = 'You have not been authorised...try going to the home page to login?';
   res.render('ejs/error', {error_msg: errorMessages});
 }
+
+/* Save weather data from OpenWeatherAPI to DB */
+setInterval(function() {
+  openWeather.postWeatherAPI();
+}, 1000 * 60 * 30);
