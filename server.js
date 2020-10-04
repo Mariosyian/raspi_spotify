@@ -298,7 +298,7 @@ app.get('/spotify_get_current', function(req, res) {
 
 /* Spotify play */
 app.get('/spotify_play', function(req, res) {
-  logResponse('PUT', '/spotify_play', res);
+  logResponse('GET', '/spotify_play', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ' + 'Access token is null');
     noAuthToken(res);
@@ -327,7 +327,7 @@ app.get('/spotify_play', function(req, res) {
 
 /* Spotify pause */
 app.get('/spotify_pause', function(req, res) {
-  logResponse('PUT', '/spotify_pause', res);
+  logResponse('GET', '/spotify_pause', res);
   if (spotifyAccessToken === null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ' + 'Access token is null');
     noAuthToken(res);
@@ -421,7 +421,6 @@ app.get('/weather', function(req, res) {
 
 app.get('/logout', function(req, res) {
   spotifyAccessToken = null;
-  // res.redirect('/');
   res.redirect('https://www.spotify.com/logout/');
 });
 

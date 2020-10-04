@@ -15,7 +15,7 @@ This project is for use as a personal hobby and to further explore use of databa
 * Spotify-Web-Api-Node -- Version Used: v4.0.0
 
 # Usage:
-**NOTE:** All API Keys and other sensitive information is kept inside a `.env` file.
+**NOTE:** All API Keys and other sensitive information is kept inside a `.env` file (already placed in the `.gitignore` file).
 
 Navigate to the root directory
 ```
@@ -53,3 +53,73 @@ This project is in very early stages so no screenshots or data exist. Hopefully 
 * HTML for creating the page
 * MongoDB and Mongoose framework for data storage
 * Node.js and Express for back-end
+
+# API:
+This app is set to run on port 3000 or can be manually changed either in the source code or by introducing a `PORT` environment variable. It acts as an interface, to  directly communicate with the Spotify API.
+
+In order to communicate with the API, an `Authorisation Token` is required. You can get one by visiting http://localhost:3000/
+
+This redirects to Spotify's login page and asks access for the following permissions:
+```
+user-modify-playback-state
+user-read-email
+user-read-playback-state
+user-read-private
+user-read-recently-played
+user-read-currently-playing
+user-modify-playback-state
+```
+
+Once granted, the user now has an `Authorisation Token` valid for 1 hour. A `Refresh Token` is also returned which can be used to extend the current session. More information can be found on Spotify's Authorization Guide (https://developer.spotify.com/documentation/general/guides/authorization-guide/).
+
+With the `Authorisation Token`, the user can now make requests to the API.
+
+## Endpoints:
+Name | Endpoint | Operations Supported
+------------ | ------------- | -------------
+Home Page | http://localhost:3000/ | GET
+Logout | http://localhost:3000/logout | GET
+Pause Track | http://localhost:3000/spotify_pause | GET
+Play Track | http://localhost:3000/spotify_play | GET
+Play / Pause Track | http://localhost:3000/spotify_play_pause | POST
+Next Track | http://localhost:3000/spotify_next | POST
+Previous Track | http://localhost:3000/spotify_previous | POST
+Repeat Off / Context / Track | http://localhost:3000/spotify_repeat | POST
+Shuffle Tracks | http://localhost:3000/spotify_shuffle | POST
+Weather Data | http://localhost:3000/weather | GET
+
+More endpoints exist such as `/error`, `/spotify`, `/spotify_callback` and `/spotify_get_current` which are not meant to be used by the user directly (see below chart).
+
+![Authentication Chart](images_docs/wireframe.png)
+
+# WebApp layout:
+![Home Page](images_docs/home_page.png)
+
+The WebApp has a simple interface that should already be familiar to most media players.
+
+On the top is the applications name, along with the username of the currently logged in user (This links to their Spotify profile). Below is a hyperlink that redirects the user the logout endpoint, terminating their current session and `Authorisation Token`.
+
+In the middle row, the currently playing track can be seen with links to the track and all its artists. The media buttons are read as follows:
+
+![Shuffle Off](images_docs/shuffle_off.png) Shuffle is currently off
+
+![Shuffle On](images_docs/shuffle_on.png) Shuffle is currently on
+
+![Previous Track](images_docs/previous_track.png) Skip to previous track
+
+![Pause](images_docs/pause.png) Pressing the button will pause the current track
+
+![Play](images_docs/play.png) Pressing the button will play the current track
+
+![Next Track](images_docs/next_track.png) Skip to next track
+
+![Repeat Off](images_docs/repeat_off.png) Repeat is currently off
+
+![Repeat Context](images_docs/repeat_context.png) Repeat is currently on context state. Repeats entire queue.
+
+![Repeat On](images_docs/repeat_on.png) Repeat is currently on track state. Repeats currently playing track.
+
+# Known-Issues:
+* `/weather` endpoint returns 4xx error if the API call has not finished and user requested again.
+* Spamming any media button can cause unstable state in the application although the player (most of the times) responds to the given commands in order. This was tested with a decent internet connection and response times of 200-300ms for each command.
+* Currently playing track sometimes shows the previous playing track.
