@@ -56,6 +56,7 @@ const spotifyUserID = process.env.SPOTIFY_USER_ID;
 
 var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
+var spotifyExpire = null;
 
 /***** SPOTIFY PLAYLISTS ******/
 const sunny = [
@@ -95,6 +96,7 @@ app.get('/', function(req, res) {
   if (spotifyAccessToken == null) {
     res.redirect('/spotify');
   } else {
+    openWeather.postWeatherAPI();
     const context = {
       user: spotifyUser,
       current_device: currentDevice,
@@ -169,12 +171,16 @@ app.get('/spotify_callback', function(req, res) {
     auth: {
       username: spotifyClientID,
       password: spotifySecretID,
-    }
+    },
   })
   .then(function(response) {
     logResponse('POST', 'https://accounts.spotify.com/api/token', { statusCode: response.status });
     spotifyAccessToken = response.data.access_token;
     spotifyRefreshToken = response.data.refresh_token;
+    spotifyExpire = response.data.expires_in - 10;
+    setInterval(() => {
+      spotifyRefreshAccessToken();
+    }, spotifyExpire * 1000);
     console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ' +
                                      'Succesfully retrieved access token!');
     
@@ -599,6 +605,41 @@ function noAuthToken(res) {
 /**
  * Save weather data from OpenWeatherAPI to DB
  */
-setInterval(function() {
+setInterval(() => {
   openWeather.postWeatherAPI();
 }, 1000 * 60 * 30);
+
+/**
+ * Call the Spotify API with a refresh token to keep session alive
+ */
+function spotifyRefreshAccessToken() {
+  console.log(spotifyRefreshToken);
+  axios({
+    url: 'https://accounts.spotify.com/api/token',
+    method: 'POST',
+    params: {
+      grant_type: 'refresh_token',
+      refresh_token: spotifyRefreshToken,
+      client_id: spotifyClientID,
+    },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    auth: {
+      username: spotifyClientID,
+      password: spotifySecretID,
+    },
+  })
+  .then(function(response) {
+    logResponse('POST', 'https://accounts.spotify.com/api/token', { statusCode: response.status });
+    spotifyAccessToken = response.data.access_token;
+    spotifyRefreshToken = response.data.refresh_token || spotifyRefreshToken;
+    spotifyExpire = response.data.expires_in - 10;
+    console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'refresh_token -- ' +
+                                      'Succesfully retrieved refresh token!');
+  })
+  .catch(function(err) {
+    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'refresh_token -- ERROR: ' + err);
+    // TODO: res.render('ejs/error', {error_msg: err});
+  })
+};
