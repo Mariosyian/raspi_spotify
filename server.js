@@ -37,15 +37,22 @@ mongoose.connect(dbUrl, mongoContext, function(err) {
   }
 });
 
+const userSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+  password: String,
+});
+
 const weatherSchema = new mongoose.Schema({
   time: String,
   temperature: Number,
   humidity: Number,
 });
 
+const User = mongoose.model('User', userSchema);
 const weatherData = mongoose.model('Weather', weatherSchema);
 // Require here as it makes use of Weather model
-const openWeather = require(__dirname + '/views/js/openWeather');
+// const openWeather = require(__dirname + '/views/js/openWeather');
 
 /***** GLOBAL VARIABLES *****/
 const LOGTAG = 'Server: /';
@@ -56,6 +63,8 @@ const spotifyUserID = process.env.SPOTIFY_USER_ID;
 
 var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
+
+var userAuthenticated = false;
 
 /***** SPOTIFY PLAYLISTS ******/
 const sunny = [
@@ -92,22 +101,27 @@ var weatherObject = [];
 /* Home Page */
 app.get('/', function(req, res) {
   logResponse('GET', '/', res);
-  if (spotifyAccessToken == null) {
-    res.redirect('/spotify');
-  } else {
-    const context = {
-      user: spotifyUser,
-      current_device: currentDevice,
-      current_track: currentTrack,
-      playing: spotifyPlaying,
-      playlist: playlist,
-      recentTracks: recentTracks,
-      repeat: repeat,
-      shuffle: shuffle,
-      weather: weatherObject,
-    };
-    res.render('ejs/index', context);
+  if (userAuthenticated) {
+    if (spotifyAccessToken == null) {
+      res.redirect('/spotify');
+      return;
+    } else {
+      const context = {
+        user: spotifyUser,
+        current_device: currentDevice,
+        current_track: currentTrack,
+        playing: spotifyPlaying,
+        playlist: playlist,
+        recentTracks: recentTracks,
+        repeat: repeat,
+        shuffle: shuffle,
+        weather: weatherObject,
+      };
+      res.render('ejs/index', context);
+      return;
+    }
   }
+  res.redirect('/register');
 });
 
 /* Error Page */
@@ -117,6 +131,69 @@ app.get('/error', function(req, res) {
     error_msg : errorMessages,
   };
   res.render('ejs/error', context);
+});
+
+/* Login / Register / Logout */
+app.get('/login', function(req, res) {
+  logResponse('GET', '/login', res);
+  res.render('ejs/login');
+});
+
+app.get('/register', function(req, res) {
+  logResponse('GET', '/register', res);
+  res.render('ejs/register');
+});
+
+app.post('/login', function(req, res) {
+  logResponse('POST', '/login', res);
+  const username = req.body.username;
+  const password = req.body.password;
+  User.find({$and: [{ username: username }, { password: password }]}, function(err, user) {
+    if (err) {
+      console.err(err);
+    } else if (user.length == 1) {
+      console.log('Succesful login');
+      userAuthenticated = true;
+    } else {
+      console.log('Unsuccesful login attempt.');
+    }
+  }).then(function() {
+    res.redirect('/');
+  });
+});
+
+app.post('/register', function(req, res) {
+  logResponse('POST', '/register', res);
+  const username = req.body.username;
+  const email = req.body.email;
+  User.find({$or: [{ username: username }, { email: email }]}, function(err, user) {
+    if (err) {
+      console.err(err);
+    } else if (user.length == 1) {
+      console.log('User with this username or email already exists.');
+    } else {
+      const newUser = new User({
+        username: username,
+        email: email,
+        password: req.body.password,
+      });
+      newUser.save(function(err) {
+        if (err) {
+          console.err(err);
+        } else {
+          console.log('User ' + username + ' was successfully created!');
+        }
+      });
+    }
+  }).then(function() {
+    res.redirect('/register');
+  });
+});
+
+app.get('/logout', function(req, res) {
+  spotifyAccessToken = null;
+  userAuthenticated = false;
+  res.redirect('https://www.spotify.com/logout/');
 });
 
 /* Spotify Authentication */
@@ -149,7 +226,7 @@ app.get('/spotify_callback', function(req, res) {
   const code = req.query.code || null;
   if (code == null) {
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Code returned null from authorisation endpoint');
-    errorMessages = "Something went wrong during Spotify callback...Try again";
+    errorMessages = 'Something went wrong during Spotify callback...Try again';
     res.render('ejs/error', {error_msg: errorMessages});
     return;
   }
@@ -418,11 +495,6 @@ app.get('/weather', function(req, res) {
   return;
 });
 
-app.get('/logout', function(req, res) {
-  spotifyAccessToken = null;
-  res.redirect('https://www.spotify.com/logout/');
-});
-
 /***** POST REQUESTS *****/
 /* Spotify Play/Pause */
 app.post('/spotify_play_pause', function(req, res) {
@@ -599,6 +671,6 @@ function noAuthToken(res) {
 /**
  * Save weather data from OpenWeatherAPI to DB
  */
-setInterval(function() {
-  openWeather.postWeatherAPI();
-}, 1000 * 60 * 30);
+// setInterval(function() {
+//   openWeather.postWeatherAPI();
+// }, 1000 * 60 * 30);
