@@ -8,20 +8,32 @@ body {
   padding: 0px 10px;
 }
 
+.centralise-text {
+  text-align: center;
+}
+
 .current-track-thumbnail {
   border-radius: 50%;
   height: 256px;
   width: 256px;
 }
 
+.give-sm-space {
+  margin: 1%;
+}
+
+.give-md-space {
+  margin: 3%;
+}
+
+.give-lg-space {
+  margin: 5%;
+}
+
 .recent-track-thumbnail {
   border-radius: 50%;
   height: 128px;
   width: 128px;
-}
-
-.recent-track-thumbnail-cell {
-  text-align: center;
 }
 
 .spotify-information {
