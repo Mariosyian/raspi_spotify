@@ -1,0 +1,26 @@
+<%- include('header') -%>
+  <div class="card w-50 mx-auto bg-secondary give-lg-space">
+    <div class="col-xs-1 give-md-space">
+      <h1 class="w-75 mx-auto card-title centralise-text text-light">Register to RaSpotify</h1>
+    </div>
+    <form action="/register" method="POST" class="give-sm-space">
+      <div class="form-group w-75 mx-auto">
+        <label for="username" class="text-light">Username:</label>
+        <input id="username" name="username" type="text" class="form-control bg-dark text-light"></input>
+      
+        <label for="email" class="text-light">Email:</label>
+        <input id="email" name="email" type="email" class="form-control bg-dark text-light"></input>
+      
+        <label for="password" class="text-light">Password:</label>
+        <input id="password" name="password" type="password" class="form-control bg-dark text-light"></input>
+      
+        <div class="col-xs-1 centralise-text give-md-space">
+          <button type="submit" class="btn btn-lg btn-dark">Register new user account</button>
+        </div>
+        <div class="col-xs-1 centralise-text give-md-space">
+          <a href="/login" class="btn btn-sm btn-outline-dark">Login using existing account</a>
+        </div>
+      </div>
+    </form>
+  </div>
+<%- include('footer') -%>
