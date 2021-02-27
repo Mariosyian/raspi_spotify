@@ -5,7 +5,10 @@ const bodyParser = require('body-parser');
 const dotenv = require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const passport = require('passport');
+const passportLocalMongoose = require('passport-local-mongoose');
 const queryString = require('query-string');
+const session = require('express-session');
 const spotify = require('spotify-web-api-node');
 
 /***** DEPENDENCY VARIABLES *****/
@@ -14,7 +17,14 @@ app.set('view engine', 'ejs');
 
 /***** STATIC FILES *****/
 app.use('/static', express.static(__dirname + '/views/'));
+app.use(session({
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: false,
+}));
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 /***** SERVER SETUP *****/
 const port = process.env.PORT || 3000;
@@ -24,7 +34,6 @@ const mongoContext = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 };
-
 const dbUrl = process.env.MONGO_URL;
 
 mongoose.connect(dbUrl, mongoContext, function(err) {
@@ -39,9 +48,9 @@ mongoose.connect(dbUrl, mongoContext, function(err) {
 
 const userSchema = new mongoose.Schema({
   username: String,
-  email: String,
   password: String,
 });
+userSchema.plugin(passportLocalMongoose);
 
 const weatherSchema = new mongoose.Schema({
   time: String,
@@ -50,6 +59,11 @@ const weatherSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', userSchema);
+// Add user session
+passport.use(User.createStrategy());
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 const weatherData = mongoose.model('Weather', weatherSchema);
 // Require here as it makes use of Weather model
 // const openWeather = require(__dirname + '/views/js/openWeather');
@@ -63,8 +77,6 @@ const spotifyUserID = process.env.SPOTIFY_USER_ID;
 
 var spotifyAccessToken = null;
 var spotifyRefreshToken = null;
-
-var userAuthenticated = false;
 
 /***** SPOTIFY PLAYLISTS ******/
 const sunny = [
@@ -101,7 +113,7 @@ var weatherObject = [];
 /* Home Page */
 app.get('/', function(req, res) {
   logResponse('GET', '/', res);
-  if (userAuthenticated) {
+  if (req.isAuthenticated()) {
     if (spotifyAccessToken == null) {
       res.redirect('/spotify');
       return;
@@ -146,53 +158,34 @@ app.get('/register', function(req, res) {
 
 app.post('/login', function(req, res) {
   logResponse('POST', '/login', res);
-  const username = req.body.username;
-  const password = req.body.password;
-  User.find({$and: [{ username: username }, { password: password }]}, function(err, user) {
-    if (err) {
-      console.err(err);
-    } else if (user.length == 1) {
-      console.log('Succesful login');
-      userAuthenticated = true;
-    } else {
-      console.log('Unsuccesful login attempt.');
-    }
-  }).then(function() {
-    res.redirect('/');
+  const user = new User({
+    username: req.body.username.trim(),
+    password: req.body.password,
   });
+  req.login(user, function(err) {
+    if (err) {
+      console.error(err);
+    } else {
+      res.redirect('/');
+    }
+  })
 });
 
 app.post('/register', function(req, res) {
   logResponse('POST', '/register', res);
-  const username = req.body.username;
-  const email = req.body.email;
-  User.find({$or: [{ username: username }, { email: email }]}, function(err, user) {
+  User.register({ username: req.body.username.trim() }, req.body.password, function (err, user) {
     if (err) {
-      console.err(err);
-    } else if (user.length == 1) {
-      console.log('User with this username or email already exists.');
+      console.error(err);
     } else {
-      const newUser = new User({
-        username: username,
-        email: email,
-        password: req.body.password,
-      });
-      newUser.save(function(err) {
-        if (err) {
-          console.err(err);
-        } else {
-          console.log('User ' + username + ' was successfully created!');
-        }
+      passport.authenticate('local')(req, res, function() {
+        res.redirect('/');
       });
     }
-  }).then(function() {
-    res.redirect('/register');
   });
 });
 
 app.get('/logout', function(req, res) {
   spotifyAccessToken = null;
-  userAuthenticated = false;
   res.redirect('https://www.spotify.com/logout/');
 });
 
