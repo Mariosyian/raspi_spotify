@@ -5,7 +5,10 @@ const bodyParser = require('body-parser');
 const dotenv = require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const passport = require('passport');
+const passportLocalMongoose = require('passport-local-mongoose');
 const queryString = require('query-string');
+const session = require('express-session');
 const spotify = require('spotify-web-api-node');
 
 /***** DEPENDENCY VARIABLES *****/
@@ -14,7 +17,14 @@ app.set('view engine', 'ejs');
 
 /***** STATIC FILES *****/
 app.use('/static', express.static(__dirname + '/views/'));
+app.use(session({
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: false,
+}));
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 /***** SERVER SETUP *****/
 const port = process.env.PORT || 3000;
@@ -24,7 +34,6 @@ const mongoContext = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 };
-
 const dbUrl = process.env.MONGO_URL;
 
 mongoose.connect(dbUrl, mongoContext, function(err) {
@@ -37,15 +46,27 @@ mongoose.connect(dbUrl, mongoContext, function(err) {
   }
 });
 
+const userSchema = new mongoose.Schema({
+  username: String,
+  password: String,
+});
+userSchema.plugin(passportLocalMongoose);
+
 const weatherSchema = new mongoose.Schema({
   time: String,
   temperature: Number,
   humidity: Number,
 });
 
+const User = mongoose.model('User', userSchema);
+// Add user session
+passport.use(User.createStrategy());
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 const weatherData = mongoose.model('Weather', weatherSchema);
 // Require here as it makes use of Weather model
-const openWeather = require(__dirname + '/views/js/openWeather');
+// const openWeather = require(__dirname + '/views/js/openWeather');
 
 /***** GLOBAL VARIABLES *****/
 const LOGTAG = 'Server: /';
@@ -92,22 +113,27 @@ var weatherObject = [];
 /* Home Page */
 app.get('/', function(req, res) {
   logResponse('GET', '/', res);
-  if (spotifyAccessToken == null) {
-    res.redirect('/spotify');
-  } else {
-    const context = {
-      user: spotifyUser,
-      current_device: currentDevice,
-      current_track: currentTrack,
-      playing: spotifyPlaying,
-      playlist: playlist,
-      recentTracks: recentTracks,
-      repeat: repeat,
-      shuffle: shuffle,
-      weather: weatherObject,
-    };
-    res.render('ejs/index', context);
+  if (req.isAuthenticated()) {
+    if (spotifyAccessToken == null) {
+      res.redirect('/spotify');
+      return;
+    } else {
+      const context = {
+        user: spotifyUser,
+        current_device: currentDevice,
+        current_track: currentTrack,
+        playing: spotifyPlaying,
+        playlist: playlist,
+        recentTracks: recentTracks,
+        repeat: repeat,
+        shuffle: shuffle,
+        weather: weatherObject,
+      };
+      res.render('ejs/index', context);
+      return;
+    }
   }
+  res.redirect('/register');
 });
 
 /* Error Page */
@@ -117,6 +143,50 @@ app.get('/error', function(req, res) {
     error_msg : errorMessages,
   };
   res.render('ejs/error', context);
+});
+
+/* Login / Register / Logout */
+app.get('/login', function(req, res) {
+  logResponse('GET', '/login', res);
+  res.render('ejs/login');
+});
+
+app.get('/register', function(req, res) {
+  logResponse('GET', '/register', res);
+  res.render('ejs/register');
+});
+
+app.post('/login', function(req, res) {
+  logResponse('POST', '/login', res);
+  const user = new User({
+    username: req.body.username.trim(),
+    password: req.body.password,
+  });
+  req.login(user, function(err) {
+    if (err) {
+      console.error(err);
+    } else {
+      res.redirect('/');
+    }
+  })
+});
+
+app.post('/register', function(req, res) {
+  logResponse('POST', '/register', res);
+  User.register({ username: req.body.username.trim() }, req.body.password, function (err, user) {
+    if (err) {
+      console.error(err);
+    } else {
+      passport.authenticate('local')(req, res, function() {
+        res.redirect('/');
+      });
+    }
+  });
+});
+
+app.get('/logout', function(req, res) {
+  spotifyAccessToken = null;
+  res.redirect('https://www.spotify.com/logout/');
 });
 
 /* Spotify Authentication */
@@ -149,7 +219,7 @@ app.get('/spotify_callback', function(req, res) {
   const code = req.query.code || null;
   if (code == null) {
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Code returned null from authorisation endpoint');
-    errorMessages = "Something went wrong during Spotify callback...Try again";
+    errorMessages = 'Something went wrong during Spotify callback...Try again';
     res.render('ejs/error', {error_msg: errorMessages});
     return;
   }
@@ -418,11 +488,6 @@ app.get('/weather', function(req, res) {
   return;
 });
 
-app.get('/logout', function(req, res) {
-  spotifyAccessToken = null;
-  res.redirect('https://www.spotify.com/logout/');
-});
-
 /***** POST REQUESTS *****/
 /* Spotify Play/Pause */
 app.post('/spotify_play_pause', function(req, res) {
@@ -599,6 +664,6 @@ function noAuthToken(res) {
 /**
  * Save weather data from OpenWeatherAPI to DB
  */
-setInterval(function() {
-  openWeather.postWeatherAPI();
-}, 1000 * 60 * 30);
+// setInterval(function() {
+//   openWeather.postWeatherAPI();
+// }, 1000 * 60 * 30);
