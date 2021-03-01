@@ -13,7 +13,7 @@ const mongoContext = {
 const dbUrl = 'mongodb+srv://' + process.env.MONGO_USER + ':' +
               process.env.MONGO_PASS + '@raspi-weather-p6zoz.mongodb.net/weather';
 
-mongoose.connect(dbUrl, mongoContext, function(err) {
+mongoose.connect(dbUrl, mongoContext, (err) => {
   if (err) { 
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Failed to connect to database! Exiting server...');
     console.error('\x1b[31m%s\x1b[0m', err);
@@ -26,18 +26,18 @@ mongoose.connect(dbUrl, mongoContext, function(err) {
 const weatherData = mongoose.model('Weather');
 
 module.exports = {
-  postWeatherAPI: function() {
-    const cityName = 'Manchester';
-    const url = 'https://api.openweathermap.org/data/2.5/weather?q=' +
-                cityName + '&appid=' + process.env.OPENWEATHER_API_KEY + '&units=metric';
+  postWeatherAPI: () => {
+    const cityName = "Manchester";
+    const url = "https://api.openweathermap.org/data/2.5/weather?q=" +
+                cityName + "&appid=" + process.env.OPENWEATHER_API_KEY + "&units=metric";
   
     axios({
       url: url,
       method: 'POST',
       headers: {'Accept': 'application/json'}
     })
-    .then(function(response) {
-      console.log('POST @ ' + url + ' with response: ' + response.status);
+    .then((response) => {
+      console.log("POST @ " + url + " with response: " + response.status);
       const date = new Date();
       const split = ('' + date).split(' ');
       const timestamp = split[0] + ', ' + split[2] + '-' + split[1] + '-' + split[3] +
@@ -48,7 +48,7 @@ module.exports = {
         humidity : response.data.main.humidity
       });
   
-      weather.save(function(err) {
+      weather.save((err) => {
         if (err) {
           console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'openWeatherAPI/ -- ERROR: ' + err);
         } else {
@@ -56,8 +56,8 @@ module.exports = {
         }
       });
     })
-    .catch(function(err) {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/ -- ERROR: ' + err);
+    .catch((err) => {
+      console.error("weather/ -- ERROR: " + err);
     })
   }
 }
