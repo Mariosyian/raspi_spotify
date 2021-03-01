@@ -3,8 +3,6 @@ const dotenv = require('dotenv').config();
 const mongoose = require('mongoose');
 const server = require('./../../server.js');
 
-const LOGTAG = 'OpenWeather: ';
-
 const mongoContext = {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -15,11 +13,11 @@ const dbUrl = 'mongodb+srv://' + process.env.MONGO_USER + ':' +
 
 mongoose.connect(dbUrl, mongoContext, (err) => {
   if (err) { 
-    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Failed to connect to database! Exiting server...');
-    console.error('\x1b[31m%s\x1b[0m', err);
+    console.error('Failed to connect to database! Exiting server...');
+    console.error(err);
     process.exit(1);
   } else {
-    console.log(LOGTAG + 'Successfully connected to database!');
+    console.log('Successfully connected to database!');
   }
 });
 
@@ -50,7 +48,7 @@ module.exports = {
   
       weather.save((err) => {
         if (err) {
-          console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'openWeatherAPI/ -- ERROR: ' + err);
+          console.error('openWeatherAPI/ -- ERROR: ' + err);
         } else {
           console.log('Weather data has been successfully added to database!');
         }

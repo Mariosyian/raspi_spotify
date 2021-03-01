@@ -38,8 +38,7 @@ const dbUrl = process.env.MONGO_URL;
 
 mongoose.connect(dbUrl, mongoContext, (err) => {
   if (err) { 
-    console.error('\x1b[31m%s\x1b[0m', 'Failed to connect to database! Exiting server...');
-    console.error('\x1b[31m%s\x1b[0m', err);
+    console.error('Failed to connect to database! Exiting server...' + err.message);
     process.exit(1);
   } else {
     console.log('Successfully connected to database!');
@@ -69,8 +68,6 @@ const weatherData = mongoose.model('Weather', weatherSchema);
 // const openWeather = require(__dirname + '/views/js/openWeather');
 
 /***** GLOBAL VARIABLES *****/
-const LOGTAG = 'Server: /';
-
 const spotifyClientID = process.env.SPOTIFY_CLIENT_ID;
 const spotifySecretID = process.env.SPOTIFY_SECRET_ID;
 const spotifyUserID = process.env.SPOTIFY_USER_ID;
@@ -206,9 +203,9 @@ app.get('/spotify', (req, res) => {
               show_dialog: false,
             });
   res.redirect(url);
-  console.log(LOGTAG + 'spotify/ -- ' + 'Spotify callback redirected to --> ' + callback);
+  console.log('spotify/ -- ' + 'Spotify callback redirected to --> ' + callback);
   return;
-});
+})
 
 /*
  * Spotify Authentication Callback
@@ -218,7 +215,7 @@ app.get('/spotify_callback', (req, res) => {
   logResponse('GET', '/spotify_callback', res);
   const code = req.query.code || null;
   if (code == null) {
-    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'Code returned null from authorisation endpoint');
+    console.error('Code returned null from authorisation endpoint');
     errorMessages = 'Something went wrong during Spotify callback...Try again';
     res.render('ejs/error', {error_msg: errorMessages});
     return;
@@ -245,23 +242,22 @@ app.get('/spotify_callback', (req, res) => {
     logResponse('POST', 'https://accounts.spotify.com/api/token', { statusCode: response.status });
     spotifyAccessToken = response.data.access_token;
     spotifyRefreshToken = response.data.refresh_token;
-    console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ' +
-                                     'Succesfully retrieved access token!');
+    console.log('spotify_callback/ -- Succesfully retrieved access token!');
     
     res.redirect('/spotify_get_current');
   })
   .catch((err) => {
-    console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ERROR: ' + err);
+    console.error('spotify_callback/ -- ERROR: ' + err.message);
     res.render('ejs/error', {error_msg: err});
   });
   return;
-});
+})
 
 /* Spotify current state and user info */
 app.get('/spotify_get_current', (req, res) => {
   logResponse('GET', '/spotify_get_current', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' + 'Access token is null');
+    console.log('spotify_get_current/ -- Access token is null');
     noAuthToken(res);
   } else {
     // GET Current user info
@@ -276,18 +272,16 @@ app.get('/spotify_get_current', (req, res) => {
     .then((response) => {
       logResponse('GET', 'https://api.spotify.com/v1/me', { statusCode: response.status });
       if (response.status !== 200) {
-        console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- WARNING: ');
-        console.log(repsonse);
+        console.log('spotify_get_current/me -- WARNING: ', response);
       } else {
-        console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ' +
-                    'Succesfully logged user.');
+        console.log('spotify_get_current/me -- Succesfully logged user.');
         spotifyUser = response.data;
       }
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ERROR: ' + err);
-      res.render('ejs/error', {error_msg: err});
-    })
+      console.error('spotify_get_current/me -- ERROR: ' + err.message)
+      res.render('ejs/error', {error_msg: err})
+    });
     // GET Current player state
     /* Returns undefined if not using Spotify App on device */
     axios({
@@ -301,11 +295,9 @@ app.get('/spotify_get_current', (req, res) => {
     .then((response) => {
       logResponse('GET', 'https://api.spotify.com/v1/me/player', { statusCode: response.status });
       if (response.status !== 200) {
-        console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- WARNING: ' +
-                                        'Player has returned an invalid result!');
+        console.log('spotify_get_current/player -- WARNING: Player has returned an invalid result!');
       } else {
-        console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ' +
-                                        'Succesfully logged player state.');
+        console.log('spotify_get_current/player -- Succesfully logged player state.');
         const body = response.data;
 
         // TODO: Volume
@@ -318,7 +310,7 @@ app.get('/spotify_get_current', (req, res) => {
       }
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ERROR: ' + err);
+      console.error('spotify_get_current/player -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
     // TODO: Get player devices
@@ -336,11 +328,9 @@ app.get('/spotify_get_current', (req, res) => {
         statusCode: response.status
       });
       if (response.status !== 200) {
-        console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- WARNING:');
-        console.log(response);
+        console.log('spotify_get_current/recently-played -- WARNING: ', response);
       } else {
-        console.log('\x1b[32m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ' +
-                                        'Succesfully retrieved recent tracks.');
+        console.log('spotify_get_current/recently-played -- Succesfully retrieved recent tracks.');
         // TODO: Pressing on a recent track should play it, not just visit the page??
         recentTracks = [];
         if (response.data.items.length <= 5) {
@@ -357,8 +347,7 @@ app.get('/spotify_get_current', (req, res) => {
       res.redirect('/weather');
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ERROR: ' +
-                    err);
+      console.error('spotify_get_current/recently-played -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -369,7 +358,7 @@ app.get('/spotify_get_current', (req, res) => {
 app.get('/spotify_play', (req, res) => {
   logResponse('GET', '/spotify_play', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ' + 'Access token is null');
+    console.log('spotify_play/ -- ' + 'Access token is null');
     noAuthToken(res);
   } else {
     axios({
@@ -387,7 +376,7 @@ app.get('/spotify_play', (req, res) => {
       res.redirect(homeURI);
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ERROR: ' + err);
+      console.error('spotify_play/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -398,7 +387,7 @@ app.get('/spotify_play', (req, res) => {
 app.get('/spotify_pause', (req, res) => {
   logResponse('GET', '/spotify_pause', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ' + 'Access token is null');
+    console.log('spotify_pause/ -- Access token is null');
     noAuthToken(res);
   } else {
     axios({
@@ -416,7 +405,7 @@ app.get('/spotify_pause', (req, res) => {
       res.redirect(homeURI);
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ERROR: ' + err);
+      console.error('spotify_pause/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -428,7 +417,7 @@ app.get('/weather', (req, res) => {
   logResponse('GET', '/weather', res);
   weatherData.find((err, data) => {
     if (err) {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather -- ERROR: ' + err);
+      console.error('weather/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     } else {
       let playlistID = '';
@@ -449,7 +438,7 @@ app.get('/weather', (req, res) => {
       }
 
       // Decide which playlist to send based on readings
-      if ( weatherObject[0].temperature >= 10 && weatherObject[0].humidity <= 76) {
+      if (weatherObject[0].temperature >= 10 && weatherObject[0].humidity <= 76) {
         randomIndex = Math.round(Math.random() * sunny.length);
         playlistID = sunny[randomIndex];
       } else {
@@ -480,7 +469,7 @@ app.get('/weather', (req, res) => {
         res.redirect(homeURI);
       })
       .catch((err) => {
-        console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/playlists/ -- ERROR: ' + err);
+        console.error('weather/playlists/ -- ERROR: ' + err.message);
         res.render('ejs/error', {error_msg: err});
       });
     }
@@ -506,7 +495,7 @@ app.post('/spotify_play_pause', (req, res) => {
 app.post('/spotify_next', (req, res) => {
   logResponse('POST', '/spotify_next', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ' + 'Access token is null');
+    console.log('spotify_next/ -- Access token is null');
     noAuthToken(res);
   } else {
     axios({
@@ -524,7 +513,7 @@ app.post('/spotify_next', (req, res) => {
       res.redirect('/spotify_get_current');
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+      console.error('spotify_next/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -535,7 +524,7 @@ app.post('/spotify_next', (req, res) => {
 app.post('/spotify_previous', (req, res) => {
   logResponse('POST', '/spotify_previous', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ' + 'Access token is null');
+    console.log('spotify_previous/ -- Access token is null');
     noAuthToken(res);
   } else {
     axios({
@@ -553,7 +542,7 @@ app.post('/spotify_previous', (req, res) => {
       res.redirect('/spotify_get_current');
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ERROR: ' + err);
+      console.error('spotify_previous/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -565,7 +554,7 @@ app.post('/spotify_previous', (req, res) => {
 app.post('/spotify_repeat', (req, res) => {
   logResponse('POST', '/spotify_repeat', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_repeat/ -- ' + 'Access token is null');
+    console.log('spotify_repeat/ -- Access token is null');
     noAuthToken(res);
   } else {
 
@@ -592,7 +581,7 @@ app.post('/spotify_repeat', (req, res) => {
       res.redirect('/spotify_get_current');
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+      console.error('spotify_next/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -603,7 +592,7 @@ app.post('/spotify_repeat', (req, res) => {
 app.post('/spotify_shuffle', (req, res) => {
   logResponse('POST', '/spotify_shuffle', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');
+    console.log('spotify_shuffle/ -- Access token is null');
     noAuthToken(res);
   } else {
 
@@ -630,7 +619,7 @@ app.post('/spotify_shuffle', (req, res) => {
       res.redirect('/spotify_get_current');
     })
     .catch((err) => {
-      console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
+      console.error('spotify_next/ -- ERROR: ' + err.message);
       res.render('ejs/error', {error_msg: err});
     });
   }
@@ -651,7 +640,7 @@ app.listen(port, () => {
  * @param {Response} res 
  */
 function logResponse(type, uri, res) {
-  console.log(type + ' @ ' + uri + ' with response: ' + res.statusCode);
+  console.log(res.method + ' @ ' + res.url + ' with response: ' + res.statusCode);
 }
 
 /**
