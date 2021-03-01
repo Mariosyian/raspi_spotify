@@ -36,7 +36,7 @@ const mongoContext = {
 };
 const dbUrl = process.env.MONGO_URL;
 
-mongoose.connect(dbUrl, mongoContext, function(err) {
+mongoose.connect(dbUrl, mongoContext, (err) => {
   if (err) { 
     console.error('\x1b[31m%s\x1b[0m', 'Failed to connect to database! Exiting server...');
     console.error('\x1b[31m%s\x1b[0m', err);
@@ -111,7 +111,7 @@ var weatherObject = [];
 
 /***** GET REQUESTS *****/
 /* Home Page */
-app.get('/', function(req, res) {
+app.get('/', (req, res) => {
   logResponse('GET', '/', res);
   if (req.isAuthenticated()) {
     if (spotifyAccessToken == null) {
@@ -137,7 +137,7 @@ app.get('/', function(req, res) {
 });
 
 /* Error Page */
-app.get('/error', function(req, res) {
+app.get('/error', (req, res) => {
   logResponse('GET', '/error', res);
   const context = {
     error_msg : errorMessages,
@@ -146,23 +146,23 @@ app.get('/error', function(req, res) {
 });
 
 /* Login / Register / Logout */
-app.get('/login', function(req, res) {
+app.get('/login', (req, res) => {
   logResponse('GET', '/login', res);
-  res.render('ejs/login');
+  res.render('ejs/login')
 });
 
-app.get('/register', function(req, res) {
+app.get('/register', (req, res) => {
   logResponse('GET', '/register', res);
-  res.render('ejs/register');
+  res.render('ejs/register')
 });
 
-app.post('/login', function(req, res) {
-  logResponse('POST', '/login', res);
+app.post('/login', (req, res) => {
+  logResponse('POST', '/login', res)
   const user = new User({
     username: req.body.username.trim(),
     password: req.body.password,
-  });
-  req.login(user, function(err) {
+  })
+  req.login(user, (err) => {
     if (err) {
       console.error(err);
     } else {
@@ -171,26 +171,26 @@ app.post('/login', function(req, res) {
   })
 });
 
-app.post('/register', function(req, res) {
+app.post('/register', (req, res) => {
   logResponse('POST', '/register', res);
-  User.register({ username: req.body.username.trim() }, req.body.password, function (err, user) {
+  User.register({ username: req.body.username.trim() }, req.body.password,  (err, user) => {
     if (err) {
       console.error(err);
     } else {
-      passport.authenticate('local')(req, res, function() {
+      passport.authenticate('local')(req, res, () => {
         res.redirect('/');
-      });
+      })
     }
   });
 });
 
-app.get('/logout', function(req, res) {
+app.get('/logout', (req, res) => {
   spotifyAccessToken = null;
   res.redirect('https://www.spotify.com/logout/');
 });
 
 /* Spotify Authentication */
-app.get('/spotify', function(req, res) {
+app.get('/spotify', (req, res) => {
   logResponse('GET', '/spotify', res);
   const callback = homeURI + 'spotify_callback';
   let scopes = 'user-modify-playback-state user-read-email ' +
@@ -214,7 +214,7 @@ app.get('/spotify', function(req, res) {
  * Spotify Authentication Callback
  * Used as redirect uri to obtain auth_token
  */
-app.get('/spotify_callback', function(req, res) {
+app.get('/spotify_callback', (req, res) => {
   logResponse('GET', '/spotify_callback', res);
   const code = req.query.code || null;
   if (code == null) {
@@ -241,7 +241,7 @@ app.get('/spotify_callback', function(req, res) {
       password: spotifySecretID,
     }
   })
-  .then(function(response) {
+  .then((response) => {
     logResponse('POST', 'https://accounts.spotify.com/api/token', { statusCode: response.status });
     spotifyAccessToken = response.data.access_token;
     spotifyRefreshToken = response.data.refresh_token;
@@ -250,15 +250,15 @@ app.get('/spotify_callback', function(req, res) {
     
     res.redirect('/spotify_get_current');
   })
-  .catch(function(err) {
+  .catch((err) => {
     console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_callback/ -- ERROR: ' + err);
     res.render('ejs/error', {error_msg: err});
-  })
+  });
   return;
 });
 
 /* Spotify current state and user info */
-app.get('/spotify_get_current', function(req, res) {
+app.get('/spotify_get_current', (req, res) => {
   logResponse('GET', '/spotify_get_current', res);
   if (spotifyAccessToken == null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/ -- ' + 'Access token is null');
@@ -273,7 +273,7 @@ app.get('/spotify_get_current', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('GET', 'https://api.spotify.com/v1/me', { statusCode: response.status });
       if (response.status !== 200) {
         console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- WARNING: ');
@@ -284,7 +284,7 @@ app.get('/spotify_get_current', function(req, res) {
         spotifyUser = response.data;
       }
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/me -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
     })
@@ -298,7 +298,7 @@ app.get('/spotify_get_current', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('GET', 'https://api.spotify.com/v1/me/player', { statusCode: response.status });
       if (response.status !== 200) {
         console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- WARNING: ' +
@@ -317,10 +317,10 @@ app.get('/spotify_get_current', function(req, res) {
         shuffle = body.shuffle_state;
       }
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/player -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
     // TODO: Get player devices
     // GET recently played tracks
     axios({
@@ -331,7 +331,7 @@ app.get('/spotify_get_current', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('GET', 'https://api.spotify.com/v1/me/player/recently-played', {
         statusCode: response.status
       });
@@ -356,17 +356,17 @@ app.get('/spotify_get_current', function(req, res) {
       /* After final API call ONLY continue to Weather API */
       res.redirect('/weather');
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_get_current/recently-played -- ERROR: ' +
                     err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 
 /* Spotify play */
-app.get('/spotify_play', function(req, res) {
+app.get('/spotify_play', (req, res) => {
   logResponse('GET', '/spotify_play', res);
   if (spotifyAccessToken == null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ' + 'Access token is null');
@@ -380,22 +380,22 @@ app.get('/spotify_play', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('PUT', 'https://api.spotify.com/v1/me/player/play', {
         statusCode: response.status
       });
       res.redirect(homeURI);
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_play/ -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 
 /* Spotify pause */
-app.get('/spotify_pause', function(req, res) {
+app.get('/spotify_pause', (req, res) => {
   logResponse('GET', '/spotify_pause', res);
   if (spotifyAccessToken == null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ' + 'Access token is null');
@@ -409,24 +409,24 @@ app.get('/spotify_pause', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('PUT', 'https://api.spotify.com/v1/me/player/pause', {
         statusCode: response.status
       });
       res.redirect(homeURI);
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_pause/ -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 
 /* Get weather data */
-app.get('/weather', function(req, res) {
+app.get('/weather', (req, res) => {
   logResponse('GET', '/weather', res);
-  weatherData.find(function(err, data) {
+  weatherData.find((err, data) => {
     if (err) {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
@@ -466,7 +466,7 @@ app.get('/weather', function(req, res) {
           'Authorization': 'Bearer ' + spotifyAccessToken,
         }
       })
-      .then(function(response) {
+      .then((response) => {
         logResponse('GET', 'https://api.spotify.com/v1/playlists/'.concat(playlistID), {
           statusCode: response.status
         });
@@ -479,10 +479,10 @@ app.get('/weather', function(req, res) {
         }
         res.redirect(homeURI);
       })
-      .catch(function(err) {
+      .catch((err) => {
         console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'weather/playlists/ -- ERROR: ' + err);
         res.render('ejs/error', {error_msg: err});
-      })
+      });
     }
   });
   return;
@@ -490,7 +490,7 @@ app.get('/weather', function(req, res) {
 
 /***** POST REQUESTS *****/
 /* Spotify Play/Pause */
-app.post('/spotify_play_pause', function(req, res) {
+app.post('/spotify_play_pause', (req, res) => {
   logResponse('POST', '/spotify_play_pause', res);
   if (spotifyPlaying) {
     res.redirect('/spotify_pause');
@@ -503,7 +503,7 @@ app.post('/spotify_play_pause', function(req, res) {
 });
 
 /* Spotify skip track */
-app.post('/spotify_next', function(req, res) {
+app.post('/spotify_next', (req, res) => {
   logResponse('POST', '/spotify_next', res);
   if (spotifyAccessToken == null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ' + 'Access token is null');
@@ -517,22 +517,22 @@ app.post('/spotify_next', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('POST', 'https://api.spotify.com/v1/me/player/next', {
         statusCode: response.status
       });
       res.redirect('/spotify_get_current');
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 
 /* Spotify previous track */
-app.post('/spotify_previous', function(req, res) {
+app.post('/spotify_previous', (req, res) => {
   logResponse('POST', '/spotify_previous', res);
   if (spotifyAccessToken == null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ' + 'Access token is null');
@@ -546,23 +546,23 @@ app.post('/spotify_previous', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('POST', 'https://api.spotify.com/v1/me/player/previous', {
         statusCode: response.status
       });
       res.redirect('/spotify_get_current');
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_previous/ -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 
 /* Spotify repeat */
 // TODO: Spamming the repeat button can result in 4xx as API response doesn't arrive in time
-app.post('/spotify_repeat', function(req, res) {
+app.post('/spotify_repeat', (req, res) => {
   logResponse('POST', '/spotify_repeat', res);
   if (spotifyAccessToken == null) {
     console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_repeat/ -- ' + 'Access token is null');
@@ -585,25 +585,26 @@ app.post('/spotify_repeat', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('PUT', 'https://api.spotify.com/v1/me/player/repeat?state=' + repeat, {
         statusCode: response.status
       });
       res.redirect('/spotify_get_current');
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 
 /* Spotify shuffle */
-app.post('/spotify_shuffle', function(req, res) {
+app.post('/spotify_shuffle', (req, res) => {
   logResponse('POST', '/spotify_shuffle', res);
   if (spotifyAccessToken == null) {
-    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');noAuthToken(res);
+    console.log('\x1b[33m%s\x1b[0m', LOGTAG + 'spotify_shuffle/ -- ' + 'Access token is null');
+    noAuthToken(res);
   } else {
 
     let toggle = '';
@@ -622,25 +623,25 @@ app.post('/spotify_shuffle', function(req, res) {
         'Authorization': 'Bearer ' + spotifyAccessToken,
       }
     })
-    .then(function(response) {
+    .then((response) => {
       logResponse('PUT', 'https://api.spotify.com/v1/me/player/shuffle?state=' + toggle, {
         statusCode: response.status
       });
       res.redirect('/spotify_get_current');
     })
-    .catch(function(err) {
+    .catch((err) => {
       console.error('\x1b[31m%s\x1b[0m', LOGTAG + 'spotify_next/ -- ERROR: ' + err);
       res.render('ejs/error', {error_msg: err});
-    })
+    });
   }
   return;
 });
 /*********** END OF REQUEST METHODS **********/
 
 /***** BIND SERVER TO PORT *****/
-app.listen(port, function() {
+app.listen(port, () => {
   console.log('Server listening at: ' + homeURI + ' on port: ' + port);
-});
+})
 
 /***** UTILITY METHODS *****/
 /**
@@ -664,6 +665,6 @@ function noAuthToken(res) {
 /**
  * Save weather data from OpenWeatherAPI to DB
  */
-// setInterval(function() {
+// setInterval(() => {
 //   openWeather.postWeatherAPI();
 // }, 1000 * 60 * 30);
