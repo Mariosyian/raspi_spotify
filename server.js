@@ -187,6 +187,50 @@ app.get("/logout", (req, res) => {
   res.redirect("https://www.spotify.com/logout/");
 });
 
+/* Login / Register / Logout */
+app.get('/login', function(req, res) {
+  logResponse('GET', '/login', res);
+  res.render('ejs/login');
+});
+
+app.get('/register', function(req, res) {
+  logResponse('GET', '/register', res);
+  res.render('ejs/register');
+});
+
+app.post('/login', function(req, res) {
+  logResponse('POST', '/login', res);
+  const user = new User({
+    username: req.body.username.trim(),
+    password: req.body.password,
+  });
+  req.login(user, function(err) {
+    if (err) {
+      console.error(err);
+    } else {
+      res.redirect('/');
+    }
+  })
+});
+
+app.post('/register', function(req, res) {
+  logResponse('POST', '/register', res);
+  User.register({ username: req.body.username.trim() }, req.body.password, function (err, user) {
+    if (err) {
+      console.error(err);
+    } else {
+      passport.authenticate('local')(req, res, function() {
+        res.redirect('/');
+      });
+    }
+  });
+});
+
+app.get('/logout', function(req, res) {
+  spotifyAccessToken = null;
+  res.redirect('https://www.spotify.com/logout/');
+});
+
 /* Spotify Authentication */
 app.get("/spotify", (req, res) => {
   logResponse(res);
