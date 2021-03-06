@@ -10,6 +10,12 @@ const passportLocalMongoose = require('passport-local-mongoose');
 const queryString = require('query-string');
 const session = require('express-session');
 const spotify = require('spotify-web-api-node');
+/*
+ * Twilio trial account gives a free US phone number you can send
+ * and receive texts / calls to and from. Each text cost about
+ * $0.04 out of the $15.00 allowance they provide.
+ */
+const twilio = require("twilio");
 
 /***** DEPENDENCY VARIABLES *****/
 const app = express();
@@ -132,7 +138,7 @@ app.get('/', (req, res) => {
       return;
     }
   }
-  res.redirect('/register');
+  res.redirect('/login');
 });
 
 /* Error Page */
@@ -144,43 +150,37 @@ app.get('/error', (req, res) => {
   res.render('ejs/error', context);
 });
 
-/* Login / Register / Logout */
+/* Login / Logout */
 app.get('/login', (req, res) => {
   logResponse(res);
   res.render('ejs/login')
 });
 
-app.get('/register', (req, res) => {
-  logResponse(res);
-  res.render('ejs/register')
-});
-
 app.post('/login', (req, res) => {
   logResponse(res);
+  const username = req.body.username.trim();
   const user = new User({
-    username: req.body.username.trim(),
+    username: username,
     password: req.body.password,
   })
+  const client = new twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
   req.login(user, (err) => {
     if (err) {
+      client.messages.create({
+        body: "Unsuccessful login by " + username + " @ " + new Date(new Date().toUTCString()),
+        to: process.env.TWILIO_PHONE_NUM_RECIPIENT,
+        from: process.env.TWILIO_PHONE_NUM_SENDER,
+    })
       console.error(err);
     } else {
+      client.messages.create({
+        body: "Successful login by " + username + " @ " + new Date(new Date().toUTCString()),
+        to: process.env.TWILIO_PHONE_NUM_RECIPIENT,
+        from: process.env.TWILIO_PHONE_NUM_SENDER,
+    })
       res.redirect('/');
     }
   })
-});
-
-app.post('/register', (req, res) => {
-  logResponse(res);
-  User.register({ username: req.body.username.trim() }, req.body.password,  (err, user) => {
-    if (err) {
-      console.error(err);
-    } else {
-      passport.authenticate('local')(req, res, () => {
-        res.redirect('/');
-      })
-    }
-  });
 });
 
 app.get('/logout', (req, res) => {
