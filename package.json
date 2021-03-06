@@ -34,6 +34,7 @@
     "passport-local": "^1.0.0",
     "passport-local-mongoose": "^6.1.0",
     "query-string": "^6.13.5",
-    "spotify-web-api-node": "^4.0.0"
+    "spotify-web-api-node": "^4.0.0",
+    "twilio": "^3.57.0"
   }
 }
