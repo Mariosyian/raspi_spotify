@@ -6,7 +6,7 @@
   "scripts": {
     "format": "js-beautify **/*.js",
     "start": "npx nodemon server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"INFO: No tests specified\" && exit 0"
   },
   "repository": {
     "type": "git",
