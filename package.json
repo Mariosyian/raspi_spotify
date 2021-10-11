@@ -4,6 +4,8 @@
   "description": "RaspberryPi Spotify Web Weather Player",
   "main": "server.js",
   "scripts": {
+    "format": "js-beautify **/*.js",
+    "start": "npx nodemon server.js",
     "test": "echo \"INFO: No tests specified\" && exit 0"
   },
   "repository": {
@@ -28,6 +30,7 @@
     "ejs": "^3.1.5",
     "express": "^4.17.1",
     "express-session": "^1.17.1",
+    "js-beautify": "^1.14.0",
     "mongoose": "^5.10.7",
     "nodemon": "^2.0.4",
     "passport": "^0.4.1",
