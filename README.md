@@ -2,20 +2,40 @@
 This project is for use as a personal hobby and to further explore use of databases, web development and the Python programming language. This project is open-source, so feel free to fork this repository and make it your own.
 
 # Requirements (Alphabetically):
-* Axios -- Version Used: v0.19.2
+* Axios -- Version Used: v0.21.2
 * Body-Parser -- Version Used: v1.19.0
 * Dotenv -- Version Used: v8.2.0
 * EJS -- Version Used: v3.1.5
 * Express -- Version Used: v4.17.1
+* Express-Session -- Version Used: v1.17.1
 * Mongoose -- Version Used: v5.10.7
-* Node.js -- Version Used: v12.16.3
+* Node.js -- Version Used: v16.13.1
 * Nodemon -- Version Used: v2.0.4
-* NPM -- Version Used: v6.14.4
+* NPM -- Version Used: v8.1.2
+* Passport-Local-Mongoose -- Version Used: v6.1.0
+* Passport-Local -- Version Used: v1.0.0
+* Passport -- Version Used: v0.4.1
 * Query-String -- Version Used: v6.13.5
 * Spotify-Web-Api-Node -- Version Used: v4.0.0
+* Twilio -- Version Used: v3.57.0
 
 # Usage:
-**NOTE:** All API Keys and other sensitive information is kept inside a `.env` file (already placed in the `.gitignore` file).
+**NOTE:** All API Keys and other sensitive information are kept inside a `.env` file (already placed in the `.gitignore` file).
+
+Example `.env` configuration
+```
+HOME_URI=<The URL that your web app will be deployed to. Heroku is a good and free webapp host.>
+MONGO_URL=<You can get this from your MongoDB Atlas dashboard>
+SECRET=<Random string used for cookies. See 'express-session' npm package for more information>
+OPENWEATHER_API_KEY=
+TWILIO_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUM_RECIPIENT=<Used to receive an SMS in case of (un)succesful logins>
+TWILIO_PHONE_NUM_SENDER=<Used to send an SMS in case of (un)succesful logins>
+SPOTIFY_CLIENT_ID=
+SPOTIFY_SECRET_ID=
+SPOTIFY_USER_ID=
+```
 
 Navigate to the root directory
 ```
@@ -120,6 +140,6 @@ In the middle row, the currently playing track can be seen with links to the tra
 ![Repeat On](images_docs/repeat_on.png) Repeat is currently on track state. Repeats currently playing track.
 
 # Known-Issues:
-* `/weather` endpoint returns 4xx error if the API call has not finished and user requested again.
-* Spamming any media button can cause unstable state in the application although the player (most of the times) responds to the given commands in order. This was tested with a decent internet connection and response times of 200-300ms for each command.
-* Currently playing track sometimes shows the previous playing track.
+* `/weather` endpoint returns 4xx error if the API call has not returned and the user requested again.
+* Spamming any media button can cause unstable state in the application although the player (most of the times) responds to the given commands in order. This was tested with a decent internet connection (DL: 100Mbps, UP:90Mbps) and response times of 200-300ms for each command.
+* Currently playing track sometimes shows the previous playing track (State discrepancy).
