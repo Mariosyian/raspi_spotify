@@ -79,8 +79,8 @@ const spotifyClientID = process.env.SPOTIFY_CLIENT_ID;
 const spotifySecretID = process.env.SPOTIFY_SECRET_ID;
 const spotifyUserID = process.env.SPOTIFY_USER_ID;
 
-var spotifyAccessToken = null;
-var spotifyRefreshToken = null;
+let spotifyAccessToken = null;
+let spotifyRefreshToken = null;
 
 /***** SPOTIFY PLAYLISTS ******/
 const sunny = [
@@ -101,17 +101,17 @@ const rainy = [
 
 /***** CONTEXT VARIABLES ******/
 /* SPOTIFY */
-var spotifyUser = "";
-var currentDevice = null;
-var currentTrack = null;
-var errorMessages = "";
-var playlist = [];
-var recentTracks = [];
-var repeat = "";
-var shuffle = false;
-var spotifyPlaying = false;
+let spotifyUser = "";
+let currentDevice = null;
+let currentTrack = null;
+let errorMessages = "";
+let playlist = [];
+let recentTracks = [];
+let repeat = "";
+let shuffle = false;
+let spotifyPlaying = false;
 /* WEATHER */
-var weatherObject = [];
+let weatherObject = [];
 
 /***** GET REQUESTS *****/
 /* Home Page */
@@ -471,7 +471,7 @@ app.get("/weather", (req, res) => {
             res.render("ejs/error", {
                 error_msg: err
             });
-        } else {
+        } else if (data) {
             let playlistID = "";
             let randomIndex = 0;
             weatherObject = [];
@@ -673,6 +673,13 @@ app.post("/spotify_shuffle", (req, res) => {
     return;
 });
 /*********** END OF REQUEST METHODS **********/
+/***** WEATHER DATA COLLECTION *****/
+/**
+ * Save weather data from OpenWeatherAPI to DB
+ */
+setInterval(() => {
+  openWeather.postWeatherAPI();
+}, 1000 * 60 * 30);
 
 /***** BIND SERVER TO PORT *****/
 app.listen(port, () => {
@@ -702,10 +709,3 @@ function noAuthToken(res) {
         error_msg: errorMessages
     });
 }
-
-/**
- * Save weather data from OpenWeatherAPI to DB
- */
-// setInterval(() => {
-//   openWeather.postWeatherAPI();
-// }, 1000 * 60 * 30);

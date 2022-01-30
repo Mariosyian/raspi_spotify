@@ -40,7 +40,7 @@ SPOTIFY_USER_ID=
 Navigate to the root directory
 ```
 npm install
-node server.js
+npm start
 ```
 
 # Project Idea:
