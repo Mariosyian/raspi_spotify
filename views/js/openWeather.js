@@ -1,7 +1,6 @@
 const axios = require("axios").default;
 const dotenv = require("dotenv").config();
 const mongoose = require("mongoose");
-const server = require("./../../server.js");
 
 const mongoContext = {
     useNewUrlParser: true,
@@ -20,7 +19,12 @@ mongoose.connect(dbUrl, mongoContext, (err) => {
     }
 });
 
-const weatherData = mongoose.model("Weather");
+const weatherSchema = new mongoose.Schema({
+    time: String,
+    temperature: Number,
+    humidity: Number,
+});
+const weatherData = mongoose.model("Weather", weatherSchema);
 
 module.exports = {
     postWeatherAPI: () => {
