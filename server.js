@@ -239,15 +239,17 @@ app.get('/logout', (req, res) => {
 app.get("/spotify", (req, res) => {
     logResponse(res);
     const callback = homeURI + "spotify_callback";
-    let scopes = "user-modify-playback-state user-read-email " +
-        "user-read-playback-state user-read-private " +
-        "user-read-recently-played user-read-currently-playing " +
-        "user-modify-playback-state";
+    let scopes = [
+        "user-modify-playback-state user-read-email",
+        "user-read-playback-state user-read-private",
+        "user-read-recently-played user-read-currently-playing",
+        "user-modify-playback-state",
+    ];
     let url = "https://accounts.spotify.com/authorize?" +
         queryString.stringify({
             response_type: "code",
             client_id: spotifyClientID,
-            scope: scopes,
+            scope: scopes.join(" "),
             redirect_uri: callback,
             show_dialog: false,
         });
@@ -518,10 +520,8 @@ app.get("/weather", (req, res) => {
                     res.redirect(homeURI);
                 })
                 .catch((err) => {
-                    console.error("weather/playlists/ -- ERROR: " + err.message);
-                    res.render("ejs/error", {
-                        error_msg: err
-                    });
+                    console.error(`weather/ -- ERROR: Playlist with id (${playlistID}) was not found ... retrying`);
+                    res.redirect("/weather");
                 });
         }
     });
