@@ -33,7 +33,7 @@
     "js-beautify": "^1.14.0",
     "mongoose": "^5.10.7",
     "nodemon": "^2.0.4",
-    "passport": "^0.4.1",
+    "passport": "^0.6.0",
     "passport-local": "^1.0.0",
     "passport-local-mongoose": "^6.1.0",
     "query-string": "^6.13.5",
